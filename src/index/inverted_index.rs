@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct Posting {
-    pub positions: Vec<usize>, 
-    pub term_freq: usize,      
+    pub positions: Vec<usize>,
+    pub term_freq: usize,
 }
 
 pub struct InvertedIndex {
@@ -10,32 +10,32 @@ pub struct InvertedIndex {
     deleted_docs: HashSet<usize>,
 }
 
-impl InvertedIndex{
-     pub fn new() -> Self {
+impl InvertedIndex {
+    pub fn new() -> Self {
         InvertedIndex {
             index: HashMap::new(),
+            deleted_docs: HashSet::new(),
         }
     }
-    pub fn addTerm(&mut self  , term: &str , docId: &str , pos : usize ){
+    pub fn add_term(&mut self, term: &str, doc_id: usize, pos: usize) {
         if self.deleted_docs.contains(&doc_id) {
             return;
         }
-        let postings = self.index.entry(term.to_string()).or_insert_with(HashMap::new);
+        let postings = self
+            .index
+            .entry(term.to_string())
+            .or_insert_with(HashMap::new);
 
         let posting = postings.entry(doc_id).or_insert_with(|| Posting {
             positions: Vec::new(),
             term_freq: 0,
         });
 
-        posting.positions.push(position);
+        posting.positions.push(pos);
         posting.term_freq += 1;
     }
 
-    pub fn removeDocument(&mut self, docId: usize) {
-       deleted_docs.insert(docId)
-    }
-
-    pub fn getPostings(&self, term: &str) -> Option<HashMap<usize, &Posting>> {
+    pub fn get_postings(&self, term: &str) -> Option<HashMap<usize, &Posting>> {
         self.index.get(term).map(|postings| {
             postings
                 .iter()
@@ -45,7 +45,7 @@ impl InvertedIndex{
         })
     }
 
-    pub fn searchTerm(&self, term: &str) -> Vec<usize> {
+    pub fn search_term(&self, term: &str) -> Vec<usize> {
         match self.index.get(term) {
             Some(postings) => postings
                 .keys()
@@ -56,19 +56,24 @@ impl InvertedIndex{
         }
     }
 
-      pub fn docFreq(&self, term: &str) -> usize {
+    pub fn doc_freq(&self, term: &str) -> usize {
         self.search_term(term).len()
     }
 
-    pub fn removeDocument(&mut self, doc_id: usize) {
+    pub fn remove_document(&mut self, doc_id: usize) {
         self.deleted_docs.insert(doc_id);
     }
 
-    pub fn isDeleted(&self, doc_id: &usize) -> bool {
+    pub fn is_deleted(&self, doc_id: &usize) -> bool {
         self.deleted_docs.contains(doc_id)
     }
 
-    pub fn restoreDocument(&mut self, doc_id: usize) {
-        self.deleted_docs.remove(&doc_id);
+    pub fn compact_index(&mut self) {
+        for postings in self.index.values_mut() {
+            for doc_id in &self.deleted_docs {
+                postings.remove(doc_id);
+            }
+        }
+        self.deleted_docs.clear();
     }
 }
