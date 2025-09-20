@@ -1,10 +1,10 @@
 use std::collections::{HashMap, HashSet};
-
+#[derive(Debug)]
 pub struct Posting {
     pub positions: Vec<usize>,
     pub term_freq: usize,
 }
-
+#[derive(Debug)]
 pub struct InvertedIndex {
     index: HashMap<String, HashMap<usize, Posting>>,
     deleted_docs: HashSet<usize>,
