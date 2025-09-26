@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 pub struct Posting {
     pub positions: Vec<usize>,
     pub term_freq: usize,
+    pub field_paths: HashSet<String>,
 }
 #[derive(Debug)]
 pub struct InvertedIndex {
@@ -17,23 +18,28 @@ impl InvertedIndex {
             deleted_docs: HashSet::new(),
         }
     }
-    pub fn add_term(&mut self, term: &str, doc_id: usize, pos: usize) {
-        if self.deleted_docs.contains(&doc_id) {
-            return;
-        }
-        let postings = self
-            .index
-            .entry(term.to_string())
-            .or_insert_with(HashMap::new);
-
-        let posting = postings.entry(doc_id).or_insert_with(|| Posting {
-            positions: Vec::new(),
-            term_freq: 0,
-        });
-
-        posting.positions.push(pos);
-        posting.term_freq += 1;
+   
+pub fn add_term(&mut self, term: &str, doc_id: usize, pos: usize, field_path: &str) {
+    if self.deleted_docs.contains(&doc_id) {
+        return;
     }
+
+    let postings = self
+        .index
+        .entry(term.to_string())
+        .or_insert_with(HashMap::new);
+
+    let posting = postings.entry(doc_id).or_insert_with(|| Posting {
+        positions: Vec::new(),
+        field_paths: HashSet::new(),
+        term_freq: 0,
+    });
+
+    posting.positions.push(pos);                       // push position
+    posting.field_paths.insert(field_path.to_string()); // insert field path
+    posting.term_freq += 1;                             // increment frequency
+}
+
 
     pub fn get_postings(&self, term: &str) -> Option<HashMap<usize, &Posting>> {
         self.index.get(term).map(|postings| {

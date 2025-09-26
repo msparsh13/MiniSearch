@@ -84,6 +84,7 @@ impl DocumentStore {
                 *s = s.trim().to_string(); // can normalize date format if needed
             }
             Value::Object(obj) => {
+               // print!("{:?}",obj);
                 for (_, v) in obj.iter_mut() {
                     Self::normalize_value_rec(v, current_depth + 1, max_depth);
                 }
@@ -104,7 +105,7 @@ impl DocumentStore {
             let (words, ngrams) = self.tokenizer.tokenize(text, self.allow_ngram);
 
             for w in &words {
-                self.normal_index.add_term(w, doc_id.parse::<usize>().unwrap(), pos);
+                self.normal_index.add_term(w, doc_id.parse::<usize>().unwrap(), pos , &field_path);
             }
         }
     }
@@ -117,7 +118,7 @@ impl DocumentStore {
         max_depth: usize,
         output: &mut Vec<(String, String)>,
     ) {
-        if current_depth >= max_depth {
+        if current_depth > max_depth {
             return;
         }
 
@@ -127,7 +128,7 @@ impl DocumentStore {
             } else {
                 format!("{}.{}", prefix, key)
             };
-
+             output.push((key.clone(), field_path.clone()));
             match value {
     Value::Text(t) => output.push((t.clone(), field_path)),
     Value::Number(n) => output.push((n.to_string(), field_path)),
