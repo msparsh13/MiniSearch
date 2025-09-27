@@ -18,28 +18,27 @@ impl InvertedIndex {
             deleted_docs: HashSet::new(),
         }
     }
-   
-pub fn add_term(&mut self, term: &str, doc_id: usize, pos: usize, field_path: &str) {
-    if self.deleted_docs.contains(&doc_id) {
-        return;
+
+    pub fn add_term(&mut self, term: &str, doc_id: usize, pos: usize, field_path: &str) {
+        if self.deleted_docs.contains(&doc_id) {
+            return;
+        }
+
+        let postings = self
+            .index
+            .entry(term.to_string())
+            .or_insert_with(HashMap::new);
+
+        let posting = postings.entry(doc_id).or_insert_with(|| Posting {
+            positions: Vec::new(),
+            field_paths: HashSet::new(),
+            term_freq: 0,
+        });
+
+        posting.positions.push(pos); // push position
+        posting.field_paths.insert(field_path.to_string()); // insert field path
+        posting.term_freq += 1; // increment frequency
     }
-
-    let postings = self
-        .index
-        .entry(term.to_string())
-        .or_insert_with(HashMap::new);
-
-    let posting = postings.entry(doc_id).or_insert_with(|| Posting {
-        positions: Vec::new(),
-        field_paths: HashSet::new(),
-        term_freq: 0,
-    });
-
-    posting.positions.push(pos);                       // push position
-    posting.field_paths.insert(field_path.to_string()); // insert field path
-    posting.term_freq += 1;                             // increment frequency
-}
-
 
     pub fn get_postings(&self, term: &str) -> Option<HashMap<usize, &Posting>> {
         self.index.get(term).map(|postings| {

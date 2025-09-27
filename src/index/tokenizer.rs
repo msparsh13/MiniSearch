@@ -29,9 +29,9 @@ pub struct Tokenizer {
 
 impl Tokenizer {
     pub fn new(config: TokenizerConfig) -> Self {
-          if let (Some(min_n), Some(max_n)) = (config.min_ngram, config.max_ngram) {
+        if let (Some(min_n), Some(max_n)) = (config.min_ngram, config.max_ngram) {
             if min_n > max_n {
-                 panic!("min_ngram should be <= max_ngram");
+                panic!("min_ngram should be <= max_ngram");
             }
         }
         let stemmer = if config.use_stemming {
@@ -59,7 +59,7 @@ impl Tokenizer {
         }
 
         // 4. N-gram tokens
-        // we are keeping words in another inverted index so we dont need to save full words here 
+        // we are keeping words in another inverted index so we dont need to save full words here
         let ngram_tokens = if allow_ngram {
             let min_n = self.config.min_ngram.unwrap_or(1);
             let max_n = self.config.max_ngram.unwrap_or(min_n);
@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-     #[should_panic(expected = "min_ngram should be <= max_ngram")]
+    #[should_panic(expected = "min_ngram should be <= max_ngram")]
     fn min_ngram_more_than_max_ngram_should_fail() {
         let config = TokenizerConfig {
             use_stemming: false,
@@ -149,27 +149,25 @@ mod tests {
         let result = Tokenizer::new(config);
     }
 
+    #[test]
+    fn one_min_or_max_n_gram_is_given() {
+        let config = TokenizerConfig {
+            use_stemming: false,
+            min_ngram: Some(5),
+            max_ngram: None,
+        };
 
-#[test]
-fn one_min_or_max_n_gram_is_given() {
-    let config = TokenizerConfig {
-        use_stemming: false,
-        min_ngram:Some(5),
-        max_ngram: None,
-    };
+        let tokenizer = Tokenizer::new(config); // returns Tokenizer
+        let (words, ngrams) = tokenizer.tokenize("Hello Worlds 123", true);
 
-    let tokenizer = Tokenizer::new(config); // returns Tokenizer
-    let (words, ngrams) = tokenizer.tokenize("Hello Worlds 123", true);
+        assert_eq!(words, vec!["hello", "worlds", "123"]);
 
-    assert_eq!(words, vec!["hello", "worlds" , "123"]);
-
-    let ngrams = ngrams.unwrap();
-    assert_eq!(ngrams , vec!["hello" ,"world" , "orlds" ]);
-    for word in &words {
-        if word.len() >= 5 {
-            assert!(ngrams.iter().any(|g| g.len() == 5));
+        let ngrams = ngrams.unwrap();
+        assert_eq!(ngrams, vec!["hello", "world", "orlds"]);
+        for word in &words {
+            if word.len() >= 5 {
+                assert!(ngrams.iter().any(|g| g.len() == 5));
+            }
         }
     }
-}
-
 }

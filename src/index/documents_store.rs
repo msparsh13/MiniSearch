@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::index::inverted_index::InvertedIndex;
 use crate::index::tokenizer::{Tokenizer, TokenizerConfig};
+use std::collections::HashMap;
 
 /**
  * We will need three inverted indexes:
@@ -28,20 +28,28 @@ pub struct DocumentStore {
     tokenizer: Tokenizer,
     allow_ngram: bool,
     pub normal_index: InvertedIndex,
+    pub n_gram_index: Option<InvertedIndex>,
 }
 
 impl DocumentStore {
-    pub fn new(allow_ngram: bool) -> Self {
-        let config = TokenizerConfig {
-            min_ngram: if allow_ngram { Some(2) } else { None },
-            ..Default::default()
-        };
+    pub fn new(config: Option<TokenizerConfig>) -> Self {
+        // Determine tokenizer config
+        let tokenizer_config = config.unwrap_or_default();
+
+        // Determine allow_ngram: true if min_ngram or max_ngram is Some
+        let allow_ngram =
+            tokenizer_config.min_ngram.is_some() || tokenizer_config.max_ngram.is_some();
 
         Self {
             store: HashMap::new(),
             allow_ngram,
-            tokenizer: Tokenizer::new(config),
+            tokenizer: Tokenizer::new(tokenizer_config),
             normal_index: InvertedIndex::new(),
+            n_gram_index: if allow_ngram {
+                Some(InvertedIndex::new())
+            } else {
+                None
+            },
         }
     }
 
@@ -57,7 +65,10 @@ impl DocumentStore {
             Self::normalize_value(value, max_depth);
         }
 
-        let doc = Document { id: id.clone(), data };
+        let doc = Document {
+            id: id.clone(),
+            data,
+        };
         self.store.insert(id.clone(), doc);
         id
     }
@@ -84,7 +95,7 @@ impl DocumentStore {
                 *s = s.trim().to_string(); // can normalize date format if needed
             }
             Value::Object(obj) => {
-               // print!("{:?}",obj);
+                // print!("{:?}",obj);
                 for (_, v) in obj.iter_mut() {
                     Self::normalize_value_rec(v, current_depth + 1, max_depth);
                 }
@@ -105,7 +116,16 @@ impl DocumentStore {
             let (words, ngrams) = self.tokenizer.tokenize(text, self.allow_ngram);
 
             for w in &words {
-                self.normal_index.add_term(w, doc_id.parse::<usize>().unwrap(), pos , &field_path);
+                self.normal_index
+                    .add_term(w, doc_id.parse::<usize>().unwrap(), pos, &field_path);
+            }
+
+            if let Some(ref mut n_index) = self.n_gram_index {
+                for gram in &ngrams {
+                    for g in gram {
+                        n_index.add_term(g, doc_id.parse::<usize>().unwrap(), pos, &field_path);
+                    }
+                }
             }
         }
     }
@@ -128,14 +148,15 @@ impl DocumentStore {
             } else {
                 format!("{}.{}", prefix, key)
             };
-             output.push((key.clone(), field_path.clone()));
+            output.push((key.clone(), field_path.clone()));
             match value {
-    Value::Text(t) => output.push((t.clone(), field_path)),
-    Value::Number(n) => output.push((n.to_string(), field_path)),
-    Value::Date(d) => output.push((d.clone(), field_path)),
-    Value::Object(obj) => Self::extract_text(obj, &field_path, current_depth + 1, max_depth, output),
-}
-
+                Value::Text(t) => output.push((t.clone(), field_path)),
+                Value::Number(n) => output.push((n.to_string(), field_path)),
+                Value::Date(d) => output.push((d.clone(), field_path)),
+                Value::Object(obj) => {
+                    Self::extract_text(obj, &field_path, current_depth + 1, max_depth, output)
+                }
+            }
         }
     }
 }
