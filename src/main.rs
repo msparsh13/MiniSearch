@@ -16,7 +16,7 @@ use std::collections::HashMap;
 fn main() {
     let config = TokenizerConfig {
         use_stemming: false,
-        min_ngram: Some(4),
+        min_ngram: Some(2),
         max_ngram: Some(5),
     };
 
