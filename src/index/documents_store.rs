@@ -1,5 +1,6 @@
-use crate::index::inverted_index::InvertedIndex;
+use crate::index::inverted_index::{self, InvertedIndex};
 use crate::index::tokenizer::{Tokenizer, TokenizerConfig};
+use crate::index::n_gram_index::{self, NgramIndex};
 use std::collections::HashMap;
 
 /**
@@ -28,7 +29,7 @@ pub struct DocumentStore {
     tokenizer: Tokenizer,
     allow_ngram: bool,
     pub normal_index: InvertedIndex,
-    pub n_gram_index: Option<InvertedIndex>,
+    pub n_gram_index: Option<NgramIndex>,
 }
 
 impl DocumentStore {
@@ -46,7 +47,7 @@ impl DocumentStore {
             tokenizer: Tokenizer::new(tokenizer_config),
             normal_index: InvertedIndex::new(),
             n_gram_index: if allow_ngram {
-                Some(InvertedIndex::new())
+                Some(NgramIndex::new())
             } else {
                 None
             },
@@ -103,32 +104,39 @@ impl DocumentStore {
         }
     }
 
-    pub fn index_document(
-        &mut self,
-        doc_id: &str,
-        data: &HashMap<String, Value>,
-        max_depth: usize,
-    ) {
-        let mut texts = Vec::new();
-        Self::extract_text(data, "", 0, max_depth, &mut texts);
+   pub fn index_document(
+    &mut self,
+    doc_id: &str,
+    data: &HashMap<String, Value>,
+    max_depth: usize,
+) {
+    let mut texts = Vec::new();
+    Self::extract_text(data, "", 0, max_depth, &mut texts);
 
-        for (pos, (text, field_path)) in texts.iter().enumerate() {
-            let (words, ngrams) = self.tokenizer.tokenize(text, self.allow_ngram);
+    let doc_id_usize = doc_id.parse::<usize>().unwrap();
 
-            for w in &words {
-                self.normal_index
-                    .add_term(w, doc_id.parse::<usize>().unwrap(), pos, &field_path);
-            }
+    for (pos, (text, field_path)) in texts.iter().enumerate() {
+        let (tokenized_words , tokenized_ngrams )= self.tokenizer.tokenize(text, self.allow_ngram);
 
+        // 1️⃣ Index words
+        for w in &tokenized_words {
+            self.normal_index
+                .add_term(w, doc_id_usize, pos, &field_path);
+        }
+
+        // 2️⃣ Index n-grams (if enabled)
+        if let Some(ref word_ngrams) = tokenized_ngrams {
             if let Some(ref mut n_index) = self.n_gram_index {
-                for gram in &ngrams {
-                    for g in gram {
-                        n_index.add_term(g, doc_id.parse::<usize>().unwrap(), pos, &field_path);
+                for wn in word_ngrams {
+                    for gram in &wn.ngrams {
+                        n_index.insert(gram, &wn.word);
                     }
                 }
             }
         }
     }
+}
+
 
     // Recursively extract text for indexing
     fn extract_text(

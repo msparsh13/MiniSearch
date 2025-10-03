@@ -61,6 +61,20 @@ impl InvertedIndex {
         }
     }
 
+      pub fn search_term_with_fields(&self, term: &str) -> Vec<(usize, Vec<String>)> {
+        match self.index.get(term) {
+            Some(postings) => postings
+                .iter()
+                .filter(|(doc_id, _)| !self.deleted_docs.contains(doc_id))
+                .map(|(doc_id, posting)| {
+                    // return doc_id + field paths as Vec
+                    (*doc_id, posting.field_paths.iter().cloned().collect())
+                })
+                .collect(),
+            None => Vec::new(),
+        }
+    }
+
     pub fn doc_freq(&self, term: &str) -> usize {
         self.search_term(term).len()
     }

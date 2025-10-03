@@ -10,7 +10,8 @@ use std::collections::HashMap;
  * TODO:
  * Objects within objects not being read make them read by inverted index :: fixed
  * Add ngram support:: fixed
- * create function to get proper location of database object
+ * create function to get proper location of database object:fixed
+ * to do create ngram inverted index bit different [implement both hashmap and trie] :fixed
  */
 fn main() {
     let config = TokenizerConfig {
@@ -45,7 +46,7 @@ fn main() {
 
     let doc2_data_ref = store.get_document(&doc2_id).unwrap().data.clone();
     store.index_document(&doc2_id, &doc2_data_ref, 4);
-    println!("{:#?}", store.normal_index);
+    //println!("{:#?}", store.normal_index);
 
     // Pokémon stats
     let mut pikachu_stats = HashMap::new();
@@ -108,20 +109,23 @@ fn main() {
 
     let doc3_data_ref = store.get_document(&doc3_id).unwrap().data.clone();
     store.index_document(&doc3_id, &doc3_data_ref, 4);
-    println!("{:#?}", store.normal_index);
+    //println!("{:#?}", store.normal_index);
+    
     println!("{:#?}", store.n_gram_index);
-    let term = "attack";
-    let val = store.get_document("2");
-    println!("{:?}", store.get_document("2").unwrap());
-    let results = store.normal_index.search_term(term);
+   // let term = "attack";
+   // let val = store.get_document("2");
+   // println!("{:?}", store.get_document("2").unwrap());
+   // let results = store.normal_index.search_term(term);
 
-    println!("Documents containing '{}': {:?}", term, results);
-    let mut results2: Vec<usize> = Vec::new();
+   // println!("Documents containing '{}': {:?}", term, results);
+    let mut results2: Vec<String> = Vec::new();
+   // let mut results2withfields: Vec<(usize , Vec<String>)> = Vec::new();
     let term2 = "tning";
     if let Some(ref n_index) = store.n_gram_index {
-        results2 = n_index.search_term(term2);
+        results2 = n_index.get_terms(term2);
+        // results2withfields = n_index.get_terms(term2);
         // use results2 here
     }
-
-    println!("Documents containing '{}': {:?}", term2, results2);
+    
 }
+
