@@ -9,13 +9,17 @@ pub struct Posting {
 pub struct InvertedIndex {
     index: HashMap<String, HashMap<usize, Posting>>,
     deleted_docs: HashSet<usize>,
+    doc_lengths: HashMap<usize, usize>,
 }
-
+/**
+ * Todo Create bm 25 here
+ */
 impl InvertedIndex {
     pub fn new() -> Self {
         InvertedIndex {
             index: HashMap::new(),
             deleted_docs: HashSet::new(),
+            doc_lengths: HashMap::new(),
         }
     }
 
@@ -38,6 +42,10 @@ impl InvertedIndex {
         posting.positions.push(pos); // push position
         posting.field_paths.insert(field_path.to_string()); // insert field path
         posting.term_freq += 1; // increment frequency
+        self.doc_lengths
+            .entry(doc_id)
+            .and_modify(|len| *len += 1)
+            .or_insert(1);
     }
 
     pub fn get_postings(&self, term: &str) -> Option<HashMap<usize, &Posting>> {
@@ -61,7 +69,7 @@ impl InvertedIndex {
         }
     }
 
-      pub fn search_term_with_fields(&self, term: &str) -> Vec<(usize, Vec<String>)> {
+    pub fn search_term_with_fields(&self, term: &str) -> Vec<(usize, Vec<String>)> {
         match self.index.get(term) {
             Some(postings) => postings
                 .iter()
@@ -94,5 +102,33 @@ impl InvertedIndex {
             }
         }
         self.deleted_docs.clear();
+    }
+
+    pub fn bm25_search(&self, query: &[&str], k1: f64, b: f64) -> HashMap<usize, f64> {
+        let mut scores: HashMap<usize, f64> = HashMap::new();
+        let n_docs = self.doc_lengths.len() as f64;
+        let avg_doc_len = self.doc_lengths.values().sum::<usize>() as f64 / n_docs;
+
+        for &term in query {
+            if let Some(postings) = self.index.get(term) {
+                let df = postings.len() as f64;
+                let idf = ((n_docs - df + 0.5) / (df + 0.5) + 1.0).ln();
+
+                for (&doc_id, posting) in postings {
+                    if self.deleted_docs.contains(&doc_id) {
+                        continue;
+                    }
+                    let tf = posting.term_freq as f64;
+                    let doc_len = *self.doc_lengths.get(&doc_id).unwrap_or(&1) as f64;
+
+                    let denom = tf + k1 * (1.0 - b + b * doc_len / avg_doc_len);
+                    let score = idf * (tf * (k1 + 1.0)) / denom;
+
+                    *scores.entry(doc_id).or_insert(0.0) += score;
+                }
+            }
+        }
+
+        scores
     }
 }

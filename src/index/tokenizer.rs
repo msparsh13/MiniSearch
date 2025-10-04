@@ -1,7 +1,6 @@
 use regex::Regex;
 use rust_stemmers::{Algorithm, Stemmer};
 
-
 #[derive(Debug)]
 pub struct TokenizerConfig {
     pub use_stemming: bool,
@@ -24,12 +23,10 @@ impl Default for TokenizerConfig {
     }
 }
 
-
 pub struct WordNgrams {
     pub word: String,
     pub ngrams: Vec<String>,
 }
-
 
 pub struct Tokenizer {
     config: TokenizerConfig,
@@ -51,7 +48,11 @@ impl Tokenizer {
         Self { config, stemmer }
     }
 
-    pub fn tokenize(&self, text: &str, allow_ngram: bool) -> (Vec<String>, Option<Vec<WordNgrams>>) {
+    pub fn tokenize(
+        &self,
+        text: &str,
+        allow_ngram: bool,
+    ) -> (Vec<String>, Option<Vec<WordNgrams>>) {
         // 1. Word split
         let re = Regex::new(r"[A-Za-z0-9]+").unwrap();
         let mut words: Vec<String> = re
@@ -101,7 +102,6 @@ impl Tokenizer {
             .collect()
     }
 }
-
 
 // #[cfg(test)]
 // mod tests {

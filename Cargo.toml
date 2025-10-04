@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 regex = "1.11.2"
 rust-stemmers = "1.2.0"
+ordered-float = "3.3.0"

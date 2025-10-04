@@ -12,7 +12,7 @@ impl NgramIndex {
         }
     }
 
-   pub fn insert(&mut self, word: &str, term: &str) {
+    pub fn insert(&mut self, word: &str, term: &str) {
         self.map
             .entry(word.to_string())
             .or_insert_with(HashSet::new)
