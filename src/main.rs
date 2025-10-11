@@ -14,8 +14,9 @@ use std::collections::HashMap;
  * create function to get proper location of database object:fixed
  * to do create ngram inverted index bit different [implement both hashmap and trie] :fixed
  * check for deleted doc
- * we can add more complex function like search attribute names not search them to add flexibility
- * ngram index as trie
+ * ngram index as trie :: fixed we have both idx and trie
+ *  we can add more complex function like search attribute names not search them to add flexibility :fixed 
+ * now time to make complex queries > < smth
  */
 fn main() {
     let config = TokenizerConfig {
@@ -130,17 +131,15 @@ fn main() {
         // results2withfields = n_index.get_terms(term2);
         // use results2 here
     }
-    let score = store
-        .normal_index
-        .bm25_search(&["pikachu", "thunder", "mew"], 1.2, 0.75);
-    //println!("{:?}", score);
+    let score = store.normal_index.bm25_search(&["shoutmon"], 1.2, 0.75);
+    println!("{:?}", score);
 
     let k1 = 1.2;
     let b = 0.75;
     let alpha = 0.7; // weight for n-gram overlap
     let beta = 0.3; // weight for edit distance
     let top_k = 5;
-    let query = "mew";
+    let query = "mon";
     let results = store.ngram_bm25(query, k1, b, alpha, beta, top_k);
 
     // ----------------

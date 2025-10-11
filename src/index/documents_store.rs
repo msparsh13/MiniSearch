@@ -1,5 +1,6 @@
 use crate::index::inverted_index::{self, InvertedIndex};
 use crate::index::n_gram_index::{self, NgramIndex};
+use crate::index::n_gram_trie::{self, NgramTrie};
 use crate::index::tokenizer::{self, Tokenizer, TokenizerConfig};
 use ordered_float::OrderedFloat;
 use std::collections::{BinaryHeap, HashMap};
@@ -34,6 +35,7 @@ pub struct DocumentStore {
     allow_ngram: bool,
     pub normal_index: InvertedIndex,
     pub n_gram_index: Option<NgramIndex>,
+    pub n_gram_trie: Option<NgramTrie>,
 }
 
 impl DocumentStore {
@@ -52,6 +54,11 @@ impl DocumentStore {
             normal_index: InvertedIndex::new(),
             n_gram_index: if allow_ngram {
                 Some(NgramIndex::new())
+            } else {
+                None
+            },
+            n_gram_trie: if allow_ngram {
+                Some(NgramTrie::new())
             } else {
                 None
             },
@@ -131,7 +138,7 @@ impl DocumentStore {
 
             // 2️⃣ Index n-grams (if enabled)
             if let Some(ref word_ngrams) = tokenized_ngrams {
-                if let Some(ref mut n_index) = self.n_gram_index {
+                if let Some(ref mut n_index) = self.n_gram_trie {
                     for wn in word_ngrams {
                         for gram in &wn.ngrams {
                             n_index.insert(gram, &wn.word);
@@ -194,7 +201,7 @@ impl DocumentStore {
         let mut word_counts: HashMap<String, usize> = HashMap::new();
         let mut n_total = 0;
 
-        if let Some(ref ngram_index) = self.n_gram_index {
+        if let Some(ref ngram_index) = self.n_gram_trie {
             for grams in tokenized_ngrams.iter() {
                 for g in grams.iter() {
                     n_total += grams.len();

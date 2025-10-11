@@ -131,4 +131,42 @@ impl InvertedIndex {
 
         scores
     }
+
+    pub fn search_term_in_field(&self, term: &str, field: &str) -> Vec<usize> {
+        self.index
+            .get(term)
+            .map(|postings| {
+                postings
+                    .iter()
+                    .filter(|(_, posting)| posting.field_paths.contains(field))
+                    .map(|(doc_id, _)| *doc_id)
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn search_term_in_field_tree(&self, term: &str, field_prefix: &str) -> Vec<usize> {
+        let mut results = Vec::new();
+
+        // 1. Get postings for the term
+        if let Some(postings) = self.index.get(term) {
+            for (&doc_id, posting) in postings {
+                if self.deleted_docs.contains(&doc_id) {
+                    continue;
+                }
+
+                // 2. Check if any field path starts with the given prefix
+                let has_nested_match = posting
+                    .field_paths
+                    .iter()
+                    .any(|path| path.split('.').any(|part| part == field_prefix));
+
+                if has_nested_match {
+                    results.push(doc_id);
+                }
+          }
+        }
+
+        results
+    }
 }
