@@ -1,3 +1,4 @@
+use crate::index::b_tree::ValueTreeIndex;
 use crate::index::inverted_index::{self, InvertedIndex};
 use crate::index::n_gram_index::{self, NgramIndex};
 use crate::index::n_gram_trie::{self, NgramTrie};
@@ -36,6 +37,7 @@ pub struct DocumentStore {
     pub normal_index: InvertedIndex,
     pub n_gram_index: Option<NgramIndex>,
     pub n_gram_trie: Option<NgramTrie>,
+    pub value_tree: ValueTreeIndex,
 }
 
 impl DocumentStore {
@@ -62,6 +64,7 @@ impl DocumentStore {
             } else {
                 None
             },
+            value_tree: ValueTreeIndex::new(),
         }
     }
 
@@ -82,6 +85,7 @@ impl DocumentStore {
             data,
         };
         self.store.insert(id.clone(), doc);
+
         id
     }
 
@@ -122,7 +126,7 @@ impl DocumentStore {
         max_depth: usize,
     ) {
         let mut texts = Vec::new();
-        Self::extract_text(data, "", 0, max_depth, &mut texts);
+        self.extract_text(data, "", 0, max_depth, &mut texts);
 
         let doc_id_usize = doc_id.parse::<usize>().unwrap();
 
@@ -151,6 +155,7 @@ impl DocumentStore {
 
     // Recursively extract text for indexing
     fn extract_text(
+        &mut self,
         data: &HashMap<String, Value>,
         prefix: &str,
         current_depth: usize,
@@ -170,10 +175,17 @@ impl DocumentStore {
             output.push((key.clone(), field_path.clone()));
             match value {
                 Value::Text(t) => output.push((t.clone(), field_path)),
-                Value::Number(n) => output.push((n.to_string(), field_path)),
-                Value::Date(d) => output.push((d.clone(), field_path)),
+                Value::Number(n) => {
+                    self.value_tree.add_index(&field_path, value, key);
+                    output.push((n.to_string(), field_path))
+                }
+                Value::Date(d) => {
+                    self.value_tree.add_index(&field_path, value, key);
+                    output.push((d.clone(), field_path))
+                }
+
                 Value::Object(obj) => {
-                    Self::extract_text(obj, &field_path, current_depth + 1, max_depth, output)
+                    Self::extract_text(self, obj, &field_path, current_depth + 1, max_depth, output)
                 }
             }
         }
@@ -295,5 +307,9 @@ impl DocumentStore {
         }
 
         dp[n][m]
+    }
+
+    pub fn range_query(&self, field_path: &str, min: i64, max: i64) -> Vec<(&String, &String)> {
+        self.value_tree.range_query(field_path, min, max)
     }
 }

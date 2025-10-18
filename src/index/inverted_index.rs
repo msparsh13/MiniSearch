@@ -164,7 +164,7 @@ impl InvertedIndex {
                 if has_nested_match {
                     results.push(doc_id);
                 }
-          }
+            }
         }
 
         results

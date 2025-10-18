@@ -15,7 +15,8 @@ use std::collections::HashMap;
  * to do create ngram inverted index bit different [implement both hashmap and trie] :fixed
  * check for deleted doc
  * ngram index as trie :: fixed we have both idx and trie
- *  we can add more complex function like search attribute names not search them to add flexibility :fixed 
+ * make two mods schema less and with schema
+ *  we can add more complex function like search attribute names not search them to add flexibility :fixed
  * now time to make complex queries > < smth
  */
 fn main() {
@@ -114,12 +115,12 @@ fn main() {
 
     let doc3_data_ref = store.get_document(&doc3_id).unwrap().data.clone();
     store.index_document(&doc3_id, &doc3_data_ref, 4);
-    //println!("{:#?}", store.normal_index);
+    // println!("{:#?}", store.normal_index);
 
     // println!("{:#?}", store.n_gram_index);
     // let term = "attack";
     // let val = store.get_document("2");
-    println!("{:?}", store.get_document("3").unwrap());
+    // println!("{:?}", store.get_document("3").unwrap());
     // let results = store.normal_index.search_term(term);
 
     // println!("Documents containing '{}': {:?}", term, results);
@@ -132,7 +133,7 @@ fn main() {
         // use results2 here
     }
     let score = store.normal_index.bm25_search(&["shoutmon"], 1.2, 0.75);
-    println!("{:?}", score);
+    // println!("{:?}", score);
 
     let k1 = 1.2;
     let b = 0.75;
@@ -144,8 +145,28 @@ fn main() {
 
     // ----------------
     // Step 5: Print results
-    println!("Search results for '{}':", query);
+    // println!("Search results for '{}':", query);
     for (doc_id, score) in results {
-        println!("Doc {}: score {:.4}", doc_id, score);
+        // println!("Doc {}: score {:.4}", doc_id, score);
+    }
+
+    // Query documents where "attributes.year" is between 2020 and 2030
+    let year_min = 2010 * 1000; // multiply by 1000 to match normalization
+    let year_max = 2015 * 1000;
+
+    let year_results = store.range_query("attributes.year", year_min, year_max);
+    println!("Documents with 'attributes.year' in 2020-2030:");
+    for doc in year_results {
+        println!("Doc ID: {:#?}", doc);
+    }
+
+    // Query documents where Pokémon "generation" is 1
+    let gen_min = 1 * 1000; // normalize number
+    let gen_max = 1 * 1000;
+
+    let gen_results = store.range_query("trainer.team.pikachu.generation", gen_min, gen_max);
+    println!("Documents with Pokémon generation 1:");
+    for doc in gen_results {
+        println!("Doc ID: {:#?}", doc);
     }
 }
