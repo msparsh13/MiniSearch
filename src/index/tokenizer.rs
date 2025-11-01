@@ -1,5 +1,6 @@
 use regex::Regex;
 use rust_stemmers::{Algorithm, Stemmer};
+use std::fmt;
 
 #[derive(Debug)]
 pub struct TokenizerConfig {
@@ -26,6 +27,22 @@ impl Default for TokenizerConfig {
 pub struct WordNgrams {
     pub word: String,
     pub ngrams: Vec<String>,
+}
+
+impl fmt::Debug for Tokenizer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Tokenizer")
+            .field("config", &self.config)
+            .field(
+                "stemmer",
+                &if self.stemmer.is_some() {
+                    "Some(Stemmer)"
+                } else {
+                    "None"
+                },
+            )
+            .finish()
+    }
 }
 
 pub struct Tokenizer {

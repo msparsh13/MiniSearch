@@ -26,17 +26,16 @@ impl NgramTrie {
         node.terms.insert(term.to_string());
     }
 
-    pub fn get_terms(&self, word: &str) -> Vec<String> {
-        let mut node = &self.root;
-        for ch in word.chars() {
-            if let Some(next) = node.children.get(&ch) {
-                node = next;
-            } else {
-                return Vec::new();
-            }
+   pub fn get_terms<'a>(&'a self, word: &str) -> Vec<&'a str> {
+    let mut node = &self.root;
+    for ch in word.chars() {
+        match node.children.get(&ch) {
+            Some(next) => node = next,
+            None => return Vec::new(),
         }
-        node.terms.iter().cloned().collect()
     }
+    node.terms.iter().map(|s| s.as_str()).collect()
+}
 
     pub fn get_terms_with_prefix(&self, prefix: &str) -> Vec<String> {
         let mut node = &self.root;
