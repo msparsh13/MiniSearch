@@ -191,85 +191,84 @@ impl DocumentStore {
         }
     }
 
- pub fn ngram_bm25(
-    &self,
-    query: &str,
-    k1: f64,
-    b: f64,
-    alpha: f64,
-    beta: f64,
-    top_k: usize,
-) -> Vec<(String, f64)> {
-    if !self.allow_ngram {
-        return Vec::new();
-    }
+    pub fn ngram_bm25(
+        &self,
+        query: &str,
+        k1: f64,
+        b: f64,
+        alpha: f64,
+        beta: f64,
+        top_k: usize,
+    ) -> Vec<(String, f64)> {
+        if !self.allow_ngram {
+            return Vec::new();
+        }
 
-    // ----------------
-    // Step 1: tokenize query
-    let (tokenized_words, tokenized_ngrams) = self.tokenizer.tokenize(query, self.allow_ngram);
+        // ----------------
+        // Step 1: tokenize query
+        let (tokenized_words, tokenized_ngrams) = self.tokenizer.tokenize(query, self.allow_ngram);
 
-    // ----------------
-    // Step 2: collect candidate words
-    let mut word_counts: HashMap<&str, usize> = HashMap::new();
-    let mut n_total = 0usize;
+        // ----------------
+        // Step 2: collect candidate words
+        let mut word_counts: HashMap<&str, usize> = HashMap::new();
+        let mut n_total = 0usize;
 
-    if let Some(ref ngram_index) = self.n_gram_trie {
-        for grams in &tokenized_ngrams {
-            n_total += grams.len();
-            for g in grams {
-                for gr in &g.ngrams {
-                    for term in ngram_index.get_terms(gr) {
-                        *word_counts.entry(term).or_insert(0) += 1;
+        if let Some(ref ngram_index) = self.n_gram_trie {
+            for grams in &tokenized_ngrams {
+                n_total += grams.len();
+                for g in grams {
+                    for gr in &g.ngrams {
+                        for term in ngram_index.get_terms(gr) {
+                            *word_counts.entry(term).or_insert(0) += 1;
+                        }
                     }
                 }
             }
         }
-    }
 
-    // ----------------
-    // Step 3: score candidates by n-gram overlap + edit distance
-    let mut heap = BinaryHeap::new(); // (score, &str)
+        // ----------------
+        // Step 3: score candidates by n-gram overlap + edit distance
+        let mut heap = BinaryHeap::new(); // (score, &str)
 
-    let query_text = tokenized_words.join(" ");
+        let query_text = tokenized_words.join(" ");
 
-    for (&word, &count) in &word_counts {
-        let jaccard_score = count as f64 / n_total.max(1) as f64;
+        for (&word, &count) in &word_counts {
+            let jaccard_score = count as f64 / n_total.max(1) as f64;
 
-        let ed = self.edit_distance(&query_text, word);
-        let edit_score = 1.0 - (ed as f64 / word.len().max(1) as f64);
+            let ed = self.edit_distance(&query_text, word);
+            let edit_score = 1.0 - (ed as f64 / word.len().max(1) as f64);
 
-        let candidate_score = alpha * jaccard_score + beta * edit_score;
+            let candidate_score = alpha * jaccard_score + beta * edit_score;
 
-        heap.push((OrderedFloat(candidate_score), word));
-    }
-
-    // ----------------
-    // Step 4: select top-k
-    let mut candidates: Vec<(&str, f64)> = heap
-        .into_sorted_vec() // sort descending
-        .into_iter()
-        .rev()
-        .take(top_k)
-        .map(|(score, word)| (word, score.into_inner()))
-        .collect();
-
-    // ----------------
-    // Step 5: run BM25 and combine
-    let mut doc_scores: HashMap<String, f64> = HashMap::new();
-
-    for (term, weight) in candidates.drain(..) {
-        let doc_scores_map = self.normal_index.bm25_search(&[term], k1, b);
-
-        for (doc_id, bm25_score) in doc_scores_map {
-            *doc_scores.entry(doc_id).or_insert(0.0) += bm25_score * weight;
+            heap.push((OrderedFloat(candidate_score), word));
         }
+
+        // ----------------
+        // Step 4: select top-k
+        let mut candidates: Vec<(&str, f64)> = heap
+            .into_sorted_vec() // sort descending
+            .into_iter()
+            .rev()
+            .take(top_k)
+            .map(|(score, word)| (word, score.into_inner()))
+            .collect();
+
+        // ----------------
+        // Step 5: run BM25 and combine
+        let mut doc_scores: HashMap<String, f64> = HashMap::new();
+
+        for (term, weight) in candidates.drain(..) {
+            let doc_scores_map = self.normal_index.bm25_search(&[term], k1, b);
+
+            for (doc_id, bm25_score) in doc_scores_map {
+                *doc_scores.entry(doc_id).or_insert(0.0) += bm25_score * weight;
+            }
+        }
+
+        let mut doc_scores_vec: Vec<(String, f64)> = doc_scores.into_iter().collect();
+        doc_scores_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        doc_scores_vec
     }
-
-    let mut doc_scores_vec: Vec<(String, f64)> = doc_scores.into_iter().collect();
-    doc_scores_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    doc_scores_vec
-}
-
 
     // finally using dp in protect lol
     fn edit_distance(&self, a: &str, b: &str) -> usize {
@@ -383,7 +382,7 @@ impl DocumentStore {
         ids
     }
 
-       pub fn ngram_bm25_old(
+    pub fn ngram_bm25_old(
         &self,
         query: &str,  // query tokens
         k1: f64,      // BM25 parameter
@@ -462,6 +461,4 @@ impl DocumentStore {
         doc_scores_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         doc_scores_vec
     }
-
-
 }

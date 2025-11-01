@@ -28,9 +28,6 @@ impl InvertedIndex {
             return;
         }
 
-   
-
-
         let postings = self
             .index
             .entry(term.to_owned())
@@ -53,13 +50,13 @@ impl InvertedIndex {
             .or_insert(1);
     }
 
- pub fn get_postings(&self, term: &str) -> Option<impl Iterator<Item = (&String, &Posting)>> {
-    self.index.get(term).map(|postings| {
-        postings
-            .iter()
-            .filter(|(doc_id, _)| !self.deleted_docs.contains(*doc_id))
-    })
-}
+    pub fn get_postings(&self, term: &str) -> Option<impl Iterator<Item = (&String, &Posting)>> {
+        self.index.get(term).map(|postings| {
+            postings
+                .iter()
+                .filter(|(doc_id, _)| !self.deleted_docs.contains(*doc_id))
+        })
+    }
 
     pub fn search_term(&self, terms: &[&str]) -> Vec<String> {
         let mut result: HashSet<&String> = HashSet::new();
@@ -84,8 +81,11 @@ impl InvertedIndex {
                 .iter()
                 .filter(|(doc_id, _)| !self.deleted_docs.contains(*doc_id))
                 .map(|(doc_id, posting)| {
-    (doc_id.clone(), posting.field_paths.iter().cloned().collect())
-})
+                    (
+                        doc_id.clone(),
+                        posting.field_paths.iter().cloned().collect(),
+                    )
+                })
                 .collect(),
             None => Vec::new(),
         }
@@ -178,16 +178,19 @@ impl InvertedIndex {
         results
     }
 
-    pub fn search_term_with_fields_short<'a>(&'a self, term: &str) -> Vec<(&'a String, Vec<&'a String>)> {
-    self.index.get(term)
-        .map(|postings| {
-            postings
-                .iter()
-                .filter(|(doc_id, _)| !self.deleted_docs.contains(*doc_id))
-                .map(|(doc_id, posting)| (doc_id, posting.field_paths.iter().collect()))
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
+    pub fn search_term_with_fields_short<'a>(
+        &'a self,
+        term: &str,
+    ) -> Vec<(&'a String, Vec<&'a String>)> {
+        self.index
+            .get(term)
+            .map(|postings| {
+                postings
+                    .iter()
+                    .filter(|(doc_id, _)| !self.deleted_docs.contains(*doc_id))
+                    .map(|(doc_id, posting)| (doc_id, posting.field_paths.iter().collect()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
 }

@@ -46,7 +46,10 @@ fn main() {
 
     // --- Document 1
     let mut doc1 = HashMap::new();
-    doc1.insert("text".to_string(), Value::Text("Rust programming is fun".to_string()));
+    doc1.insert(
+        "text".to_string(),
+        Value::Text("Rust programming is fun".to_string()),
+    );
     let doc1_id = add_and_index(&mut store, doc1, 2);
     println!("Added doc1 id = {}", doc1_id);
 
@@ -74,12 +77,21 @@ fn main() {
     pikachu_stats.insert("defense".to_string(), Value::Number(40.0));
 
     let mut pikachu_moves = HashMap::new();
-    pikachu_moves.insert("quick_attack".to_string(), Value::Text("Electric".to_string()));
-    pikachu_moves.insert("thunderbolt".to_string(), Value::Text("Electric".to_string()));
+    pikachu_moves.insert(
+        "quick_attack".to_string(),
+        Value::Text("Electric".to_string()),
+    );
+    pikachu_moves.insert(
+        "thunderbolt".to_string(),
+        Value::Text("Electric".to_string()),
+    );
 
     let mut pikachu_abilities = HashMap::new();
     pikachu_abilities.insert("primary".to_string(), Value::Text("Static".to_string()));
-    pikachu_abilities.insert("hidden".to_string(), Value::Text("Lightning Rod".to_string()));
+    pikachu_abilities.insert(
+        "hidden".to_string(),
+        Value::Text("Lightning Rod".to_string()),
+    );
 
     let mut pikachu = HashMap::new();
     pikachu.insert("stats".to_string(), Value::Object(pikachu_stats));
@@ -90,14 +102,20 @@ fn main() {
 
     let mut trainer_info = HashMap::new();
     trainer_info.insert("name".to_string(), Value::Text("Ash Ketchum".to_string()));
-    trainer_info.insert("hometown".to_string(), Value::Text("Pallet Town".to_string()));
+    trainer_info.insert(
+        "hometown".to_string(),
+        Value::Text("Pallet Town".to_string()),
+    );
     let mut team = HashMap::new();
     team.insert("pikachu".to_string(), Value::Object(pikachu));
     trainer_info.insert("team".to_string(), Value::Object(team));
 
     let mut doc3 = HashMap::new();
     doc3.insert("trainer".to_string(), Value::Object(trainer_info));
-    doc3.insert("tournament".to_string(), Value::Text("Indigo League".to_string()));
+    doc3.insert(
+        "tournament".to_string(),
+        Value::Text("Indigo League".to_string()),
+    );
     let doc3_id = add_and_index(&mut store, doc3, 4);
     println!("Added doc3 id = {}", doc3_id);
 
