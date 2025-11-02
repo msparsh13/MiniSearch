@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops::Bound::Included;
+use std::ops::RangeInclusive;
 
 use crate::index::documents_store::Value;
 
@@ -71,10 +72,10 @@ impl ValueTreeIndex {
         field_path: &str,
         mut min: Option<i64>,
         mut max: Option<i64>,
-        exclude_values: &[i64],
+        exclude_values: Option<&[i64]>,
     ) -> Vec<(&'a String, &'a String)> {
         if let Some(tree) = self.data.get(field_path) {
-            // Fallback to tree's natural min/max if not provided
+            // Default to tree’s min/max keys if not provided
             if min.is_none() {
                 min = tree.first_key_value().map(|(k, _)| *k);
             }
@@ -82,14 +83,17 @@ impl ValueTreeIndex {
                 max = tree.last_key_value().map(|(k, _)| *k);
             }
 
-            // If still none (empty tree)
             let (Some(min_val), Some(max_val)) = (min, max) else {
-                return Vec::new();
+                return Vec::new(); // tree empty or missing bounds
             };
 
-            let exclude_set: HashSet<i64> = exclude_values.iter().cloned().collect();
+            // Build exclusion set (empty if None)
+            let exclude_set: HashSet<i64> = exclude_values
+                .map(|vals| vals.iter().cloned().collect())
+                .unwrap_or_default();
 
-            tree.range(min_val..=max_val)
+            // Perform range query excluding unwanted values
+            tree.range(RangeInclusive::new(min_val, max_val))
                 .filter(|(val, _)| !exclude_set.contains(val))
                 .flat_map(|(_, docs)| docs.iter().map(|(doc_id, field)| (doc_id, field)))
                 .collect()

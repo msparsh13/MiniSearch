@@ -313,33 +313,58 @@ impl DocumentStore {
         self.value_tree.range_query(field_path, min, max)
     }
 
-    pub fn greater_than<'a>(&'a self, field_path: &str, min: i64) -> Vec<(&'a String, &'a String)> {
+    pub fn greater_than<'a>(
+        &'a self,
+        field_path: &str,
+        min: i64,
+        exclude: Option<&[i64]>,
+    ) -> Vec<(&'a String, &'a String)> {
         let max_bound = i64::MAX;
         // > min → (min+1 ..= max_bound)
-        self.value_tree.range_query(field_path, min + 1, max_bound)
+        self.value_tree.range_query_with_exclude(
+            field_path,
+            Some(min + 1),
+            Some(max_bound),
+            exclude,
+        )
     }
 
     pub fn greater_than_equal<'a>(
         &'a self,
         field_path: &str,
         min: i64,
+        exclude: Option<&[i64]>,
     ) -> Vec<(&'a String, &'a String)> {
         let max_bound = i64::MAX;
-        self.value_tree.range_query(field_path, min, max_bound)
+        self.value_tree
+            .range_query_with_exclude(field_path, Some(min), Some(max_bound), exclude)
     }
 
-    pub fn less_than<'a>(&'a self, field_path: &str, max: i64) -> Vec<(&'a String, &'a String)> {
+    pub fn less_than<'a>(
+        &'a self,
+        field_path: &str,
+        max: i64,
+        exclude: Option<&[i64]>,
+    ) -> Vec<(&'a String, &'a String)> {
         let min_bound = i64::MIN;
-        self.value_tree.range_query(field_path, min_bound, max - 1)
+        // < max → (min_bound ..= max-1)
+        self.value_tree.range_query_with_exclude(
+            field_path,
+            Some(min_bound),
+            Some(max - 1),
+            exclude,
+        )
     }
 
     pub fn less_than_equal<'a>(
         &'a self,
         field_path: &str,
         max: i64,
+        exclude: Option<&[i64]>,
     ) -> Vec<(&'a String, &'a String)> {
         let min_bound = i64::MIN;
-        self.value_tree.range_query(field_path, min_bound, max)
+        self.value_tree
+            .range_query_with_exclude(field_path, Some(min_bound), Some(max), exclude)
     }
 
     pub fn between<'a>(
@@ -347,10 +372,11 @@ impl DocumentStore {
         field_path: &str,
         min: i64,
         max: i64,
+        exclude: Option<&[i64]>,
     ) -> Vec<(&'a String, &'a String)> {
-        self.value_tree.range_query(field_path, min, max)
+        self.value_tree
+            .range_query_with_exclude(field_path, Some(min), Some(max), exclude)
     }
-
     pub fn not_word(&self, word: Vec<&str>) -> Vec<String> {
         let excluded_ids: HashSet<String> =
             self.normal_index.search_term(&word).into_iter().collect();

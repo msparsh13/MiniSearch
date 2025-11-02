@@ -68,7 +68,7 @@ fn main() {
 
     // Print a snapshot of the inverted index (debug)
     println!("Normal inverted index snapshot:\n{:#?}", store.normal_index);
-
+    println!("Normal value tree snapshot:\n{:#?}", store.value_tree);
     // --- Document 3 (trainer + nested Pokémon)
     // build Pikachu object
     let mut pikachu_stats = HashMap::new();
