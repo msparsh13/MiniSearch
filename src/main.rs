@@ -1,13 +1,17 @@
 mod index;
+mod storage;
 
-use crate::index::{
-    documents_store::{DocumentStore, Value},
-    inverted_index,
-    tokenizer::TokenizerConfig,
+use crate::storage::local_store::LocalStore;
+use crate::{
+    index::{
+        documents_store::{DocumentStore, Value},
+        inverted_index,
+        tokenizer::TokenizerConfig,
+    },
+    storage::local_store,
 };
 use std::collections::HashMap;
-
-/**
+/*
  * TODO:
  * Objects within objects not being read make them read by inverted index :: fixed
  * Add ngram support:: fixed
@@ -19,7 +23,7 @@ use std::collections::HashMap;
  *  we can add more complex function like search attribute names not search them to add flexibility :fixed
  * now time to make complex queries > < smth : fixed
  */
-fn main() {
+fn main() -> std::io::Result<()> {
     // tokenizer config (ngrams/stemming)
     let config = TokenizerConfig {
         use_stemming: false,
@@ -184,4 +188,18 @@ fn main() {
     println!("get_words for 'attack' -> {:?}", ids_for_attack);
 
     println!("Finished checks. Inspect printed structures above for correctness.");
+    let json = LocalStore::save(&store, "./data/data.json");
+
+    let store_path = "./data/data.json";
+
+    if LocalStore::exists(store_path) {
+        let loaded: DocumentStore = LocalStore::load(store_path)?;
+        println!("Loaded store with {} documents", loaded.store.len());
+        print!("{:?}", loaded.store);
+        println!("{:?}", loaded.and_word(["pikachu", "generation"].to_vec()))
+    } else {
+        println!("No saved data found.");
+    }
+
+    Ok(())
 }

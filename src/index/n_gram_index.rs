@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NgramIndex {
     map: HashMap<String, HashSet<String>>,
 }

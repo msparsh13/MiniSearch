@@ -2,9 +2,11 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops::Bound::Included;
 use std::ops::RangeInclusive;
 
+use serde::{Deserialize, Serialize};
+
 use crate::index::documents_store::Value;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValueTreeIndex {
     // field_path -> BTreeMap<normalized_value, Vec<(doc_id, field_path)>>
     pub data: HashMap<String, BTreeMap<i64, Vec<(String, String)>>>,

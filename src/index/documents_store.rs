@@ -5,6 +5,7 @@ use crate::index::n_gram_index::{self, NgramIndex};
 use crate::index::n_gram_trie::{self, NgramTrie};
 use crate::index::tokenizer::{self, Tokenizer, TokenizerConfig};
 use ordered_float::OrderedFloat;
+use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
 /**
@@ -14,11 +15,11 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
  * 3. field-aware search: term -> doc_id -> [field_path] not needed any more
  * TODO :
  * Create fuzzy search for *abcd* will need edit distance and bm 25 match :fixed
- * for n gram make it efficient by getting intersection of words
- * id string
+ * for n gram make it efficient by getting intersection of words :fixed
+ * id string :fixed
  */
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Value {
     Text(String),
     Number(f64),
@@ -26,16 +27,17 @@ pub enum Value {
     Object(HashMap<String, Value>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Document {
     pub id: String,
     pub data: HashMap<String, Value>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DocumentStore {
     pub store: HashMap<String, Document>,
-    tokenizer: Tokenizer,
+    #[serde(skip)]
+    pub tokenizer: Tokenizer,
     allow_ngram: bool,
     pub normal_index: InvertedIndex,
     pub n_gram_index: Option<NgramIndex>,
@@ -406,6 +408,30 @@ impl DocumentStore {
             .map(|id| id.to_string())
             .collect();
         ids
+    }
+
+    pub fn and_word(&self, words: Vec<&str>) -> Vec<String> {
+        let mut iter = words.into_iter();
+        let first = match iter.next() {
+            Some(w) => w,
+            None => return Vec::new(),
+        };
+
+        let mut result: HashSet<String> = self
+            .normal_index
+            .search_term(&[first])
+            .into_iter()
+            .collect();
+
+        for word in iter {
+            let ids: HashSet<String> = self.normal_index.search_term(&[word]).into_iter().collect();
+            result.retain(|id| ids.contains(id));
+            if result.is_empty() {
+                break;
+            }
+        }
+
+        result.into_iter().collect()
     }
 
     pub fn ngram_bm25_old(

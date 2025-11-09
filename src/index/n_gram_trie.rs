@@ -1,12 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Default)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TrieNode {
     children: HashMap<char, TrieNode>,
     terms: HashSet<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct NgramTrie {
     root: TrieNode,
 }

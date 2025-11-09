@@ -45,6 +45,7 @@ impl fmt::Debug for Tokenizer {
     }
 }
 
+#[derive(Default)]
 pub struct Tokenizer {
     config: TokenizerConfig,
     stemmer: Option<Stemmer>,
