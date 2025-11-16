@@ -1,9 +1,12 @@
 mod index;
 mod storage;
 
+use crate::index::query_service;
+use crate::index::search_engine::SearchEngine;
 use crate::storage::local_store::LocalStore;
 use crate::{
     index::{
+        query_service::{QueryService},
         documents_store::{DocumentStore, Value},
         inverted_index,
         tokenizer::TokenizerConfig,
@@ -31,21 +34,18 @@ fn main() -> std::io::Result<()> {
         max_ngram: Some(5),
     };
 
-    let mut store = DocumentStore::new(Some(config));
+    let index_path = "./data/data.json".to_string();
 
-    // Small helper to add & index a document without borrow issues
+    // ✅ Use SearchEngine instead of manual DocumentStore
+    let mut engine = SearchEngine::new(index_path, Some(config))?;
+
+    // Small helper to add & index a document via SearchEngine
     fn add_and_index(
-        store: &mut DocumentStore,
+        engine: &mut SearchEngine,
         data: HashMap<String, Value>,
         max_depth: usize,
-    ) -> String {
-        let id = store.add_document(data, Some(max_depth));
-        // clone data for indexing to avoid borrowing the store while indexing
-        if let Some(doc) = store.get_document(&id) {
-            let doc_data = doc.data.clone();
-            store.index_document(&id, &doc_data, max_depth);
-        }
-        id
+    ) -> std::io::Result<String> {
+        engine.add_document(data, Some(max_depth))
     }
 
     // --- Document 1
@@ -54,8 +54,8 @@ fn main() -> std::io::Result<()> {
         "text".to_string(),
         Value::Text("Rust programming is fun".to_string()),
     );
-    let doc1_id = add_and_index(&mut store, doc1, 2);
-    println!("Added doc1 id = {}", doc1_id);
+    // let doc1_id = add_and_index(&mut engine, doc1, 2)?;
+    // println!("Added doc1 id = {}", doc1_id);
 
     // --- Document 2 (attributes + nested map)
     let mut doc2 = HashMap::new();
@@ -67,14 +67,10 @@ fn main() -> std::io::Result<()> {
     inner.insert("Shoutmon".to_string(), Value::Text("digimon".to_string()));
     attributes.insert("KEY".to_string(), Value::Object(inner));
     doc2.insert("attributes".to_string(), Value::Object(attributes));
-    let doc2_id = add_and_index(&mut store, doc2, 4);
-    println!("Added doc2 id = {}", doc2_id);
+    // let doc2_id = add_and_index(&mut engine, doc2, 4)?;
+    // println!("Added doc2 id = {}", doc2_id);
 
-    // Print a snapshot of the inverted index (debug)
-    println!("Normal inverted index snapshot:\n{:#?}", store.normal_index);
-    println!("Normal value tree snapshot:\n{:#?}", store.value_tree);
     // --- Document 3 (trainer + nested Pokémon)
-    // build Pikachu object
     let mut pikachu_stats = HashMap::new();
     pikachu_stats.insert("hp".to_string(), Value::Number(35.0));
     pikachu_stats.insert("attack".to_string(), Value::Number(55.0));
@@ -120,17 +116,35 @@ fn main() -> std::io::Result<()> {
         "tournament".to_string(),
         Value::Text("Indigo League".to_string()),
     );
-    let doc3_id = add_and_index(&mut store, doc3, 4);
-    println!("Added doc3 id = {}", doc3_id);
+    // let doc3_id = add_and_index(&mut engine, doc3, 4)?;
+    // println!("Added doc3 id = {}", doc3_id);
 
-    // show ngram index presence (Option)
-    println!("N-gram index enabled? {}", store.n_gram_index.is_some());
-    println!("N-gram trie enabled? {}", store.n_gram_trie.is_some());
+    // You can still debug-print from the underlying store
+    // println!(
+    //     "Normal inverted index snapshot:\n{:#?}",
+    //     engine.store().normal_index
+    // );
+    println!(
+        "Normal value tree snapshot:\n{:#?}",
+        engine.store().value_tree
+    );
+
+    // println!(
+    //     "N-gram index enabled? {}",
+    //     engine.store().n_gram_index.is_some()
+    // );
+    // println!(
+    //     "N-gram trie enabled? {:#?}",
+    //     engine.store().n_gram_trie
+    // );
+
+    // ✅ Get a QueryService from the engine
+    let query_service = engine.query_service();
 
     // --- Basic term search
     let term = "attack";
-    let docs_with_term = store.normal_index.search_term(&[term]);
-    println!("Documents containing '{}': {:?}", term, docs_with_term);
+    let docs_with_term = query_service.get_words(vec![term]);
+    //println!("Documents containing '{}': {:?}", term, docs_with_term);
 
     // --- N-gram BM25 search example
     let k1 = 1.2;
@@ -139,31 +153,26 @@ fn main() -> std::io::Result<()> {
     let beta = 0.3;
     let top_k = 5;
     let query = "mon"; // should match "pokemon"/"digimon" etc. via n-gram
-    let ngram_results = store.ngram_bm25(query, k1, b, alpha, beta, top_k);
+    let ngram_results = query_service.ngram_bm25(query, k1, b, alpha, beta, top_k);
 
-    println!("ngram_bm25 results for query '{}':", query);
-    if ngram_results.is_empty() {
-        println!("  (no results — either ngram disabled or no matches)");
-    } else {
-        for (doc_id, score) in ngram_results {
-            println!("  doc {} => score {:.6}", doc_id, score);
-        }
-    }
+    // println!("ngram_bm25 results for query '{}':", query);
+    // if ngram_results.is_empty() {
+    //     println!("  (no results — either ngram disabled or no matches)");
+    // } else {
+    //     for (doc_id, score) in ngram_results {
+    //         println!("  doc {} => score {:.6}", doc_id, score);
+    //     }
+    // }
 
     // --- Range queries (numeric/date)
-    // Note: ValueTreeIndex stores numbers as value * 1000 (see implementation).
-    // Query attributes.year between 2020 and 2030 (example).
     let year_min = 2020 * 1000;
     let year_max = 2030 * 1000;
-    let year_matches = store.range_query("attributes.year", year_min, year_max);
-    println!(
-        "Documents with 'attributes.year' in [2020..2030]: {:?}",
-        year_matches
-    );
+    let year_matches = query_service.range_query("attributes.year", year_min, year_max);
+    // println!(
+    //     "Documents with 'attributes.year' in [2020..2030]: {:?}",
+    //     year_matches
+    // );
 
-    // Query nested numeric: generation inside trainer.team.pikachu.generation
-    // depending on how you stored field paths, you may need the exact field path.
-    // We'll attempt a few plausible prefixes (demo)
     let possible_paths = [
         "trainer.team.pikachu.generation",
         "trainer.team.pikachu.stats.generation",
@@ -172,34 +181,23 @@ fn main() -> std::io::Result<()> {
     ];
 
     for path in &possible_paths {
-        let matches = store.range_query(path, 1 * 1000, 1 * 1000);
-        if !matches.is_empty() {
-            println!("Found generation=1 at path '{}': {:?}", path, matches);
-        }
+        let matches = query_service.range_query(path, 1 * 1000, 1 * 1000);
+        // if !matches.is_empty() {
+        //     println!("Found generation=1 at path '{}': {:?}", path, matches);
+        // }
     }
 
-    // --- Demonstrate search helpers
-    // not_word example: returns doc ids that do NOT contain given words
-    let excluded = store.not_word(vec!["rust"]);
-    println!("Documents that do NOT contain 'rust': {:?}", excluded);
+    let excluded = query_service.not_word(vec!["rust"]);
+    // println!("Documents that do NOT contain 'rust': {:?}", excluded);
 
-    // get_words example (wraps search_term and returns doc ids)
-    let ids_for_attack = store.get_words(vec!["attack"]);
-    println!("get_words for 'attack' -> {:?}", ids_for_attack);
+    // let ids_for_attack = query_service.get_words(vec!["attack"]);
+    // println!("get_words for 'attack' -> {:?}", ids_for_attack);
 
-    println!("Finished checks. Inspect printed structures above for correctness.");
-    let json = LocalStore::save(&store, "./data/data.json");
+    // println!("Finished checks. Inspect printed structures above for correctness.");
 
-    let store_path = "./data/data.json";
-
-    if LocalStore::exists(store_path) {
-        let loaded: DocumentStore = LocalStore::load(store_path)?;
-        println!("Loaded store with {} documents", loaded.store.len());
-        print!("{:?}", loaded.store);
-        println!("{:?}", loaded.and_word(["pikachu", "generation"].to_vec()))
-    } else {
-        println!("No saved data found.");
-    }
+    // ✅ No need to manually call LocalStore::save here, SearchEngine already saves on add + close
+    engine.close()?;
 
     Ok(())
 }
+
