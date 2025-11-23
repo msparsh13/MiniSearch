@@ -6,9 +6,9 @@ use crate::index::search_engine::SearchEngine;
 use crate::storage::local_store::LocalStore;
 use crate::{
     index::{
-        query_service::{QueryService},
         documents_store::{DocumentStore, Value},
         inverted_index,
+        query_service::QueryService,
         tokenizer::TokenizerConfig,
     },
     storage::local_store,
@@ -25,6 +25,9 @@ use std::collections::HashMap;
  * make two mods schema less and with schema
  *  we can add more complex function like search attribute names not search them to add flexibility :fixed
  * now time to make complex queries > < smth : fixed
+ * Proper Date normalization
+ * Proper delete step 1 using forward index
+ * Proper update step using delete and add [no partial update]
  */
 fn main() -> std::io::Result<()> {
     // tokenizer config (ngrams/stemming)
@@ -124,19 +127,16 @@ fn main() -> std::io::Result<()> {
     //     "Normal inverted index snapshot:\n{:#?}",
     //     engine.store().normal_index
     // );
-    println!(
-        "Normal value tree snapshot:\n{:#?}",
-        engine.store().value_tree
-    );
+    // println!(
+    //     "Normal value tree snapshot:\n{:#?}",
+    //     engine.store().value_tree
+    // );
 
     // println!(
     //     "N-gram index enabled? {}",
     //     engine.store().n_gram_index.is_some()
     // );
-    // println!(
-    //     "N-gram trie enabled? {:#?}",
-    //     engine.store().n_gram_trie
-    // );
+    println!("N-gram trie enabled? {:#?}", engine.store().n_gram_trie);
 
     // ✅ Get a QueryService from the engine
     let query_service = engine.query_service();
@@ -189,7 +189,7 @@ fn main() -> std::io::Result<()> {
 
     let excluded = query_service.not_word(vec!["rust"]);
     // println!("Documents that do NOT contain 'rust': {:?}", excluded);
-
+    println!("{:?}", engine.store().forward_index);
     // let ids_for_attack = query_service.get_words(vec!["attack"]);
     // println!("get_words for 'attack' -> {:?}", ids_for_attack);
 
@@ -200,4 +200,3 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
-

@@ -1,24 +1,32 @@
-use std::{collections::{BinaryHeap, HashMap, HashSet}, string};
+use std::{
+    collections::{BinaryHeap, HashMap, HashSet},
+    string,
+};
 
 use ordered_float::OrderedFloat;
 use regex::SetMatches;
 
-use crate::index::{b_tree::ValueTreeIndex, documents_store::{Document, DocumentStore}, inverted_index::InvertedIndex, n_gram_index::NgramIndex, n_gram_trie::NgramTrie, tokenizer::{Tokenizer, TokenizerConfig}};
+use crate::index::{
+    b_tree::ValueTreeIndex,
+    documents_store::{Document, DocumentStore},
+    inverted_index::InvertedIndex,
+    n_gram_index::NgramIndex,
+    n_gram_trie::NgramTrie,
+    tokenizer::{Tokenizer, TokenizerConfig},
+};
 
-pub struct QueryService<'a>{
-       store:  &'a HashMap<String, Document>,
-    allow_ngram : bool,
-     tokenizer: &'a Tokenizer,
+pub struct QueryService<'a> {
+    store: &'a HashMap<String, Document>,
+    allow_ngram: bool,
+    tokenizer: &'a Tokenizer,
     normal_index: &'a InvertedIndex,
     n_gram_index: &'a Option<NgramIndex>,
     n_gram_trie: &'a Option<NgramTrie>,
     value_tree: &'a ValueTreeIndex,
 }
 
-impl<'a> QueryService<'a>{
-
-
-     pub fn new(state: &'a DocumentStore) -> Self {
+impl<'a> QueryService<'a> {
+    pub fn new(state: &'a DocumentStore) -> Self {
         Self {
             store: &state.store,
             allow_ngram: state.allow_ngram,
@@ -29,7 +37,7 @@ impl<'a> QueryService<'a>{
             value_tree: &state.value_tree,
         }
     }
-      pub fn ngram_bm25(
+    pub fn ngram_bm25(
         &self,
         query: &str,
         k1: f64,
@@ -151,8 +159,7 @@ impl<'a> QueryService<'a>{
         self.value_tree.range_query(field_path, min, max)
     }
 
-
-       pub fn greater_than(
+    pub fn greater_than(
         &'a self,
         field_path: &str,
         min: i64,
@@ -294,7 +301,7 @@ impl<'a> QueryService<'a>{
         let mut word_counts: HashMap<String, usize> = HashMap::new();
         let mut n_total = 0;
 
-        if let Some(ngram_index) = self.n_gram_trie.as_ref()  {
+        if let Some(ngram_index) = self.n_gram_trie.as_ref() {
             for grams in tokenized_ngrams.iter() {
                 for g in grams.iter() {
                     n_total += grams.len();
@@ -350,5 +357,4 @@ impl<'a> QueryService<'a>{
         doc_scores_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         doc_scores_vec
     }
-
 }

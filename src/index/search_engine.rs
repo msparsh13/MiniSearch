@@ -1,13 +1,21 @@
 use std::collections::HashMap;
 
-use crate::{index::{self, documents_store::{DocumentStore, Value}, query_service::{self, QueryService}, tokenizer::TokenizerConfig}, storage::local_store::LocalStore};
+use crate::{
+    index::{
+        self,
+        documents_store::{DocumentStore, Value},
+        query_service::{self, QueryService},
+        tokenizer::TokenizerConfig,
+    },
+    storage::local_store::LocalStore,
+};
 
 pub struct SearchEngine {
     index_path: String,
     documents_store: DocumentStore,
 }
 
-impl<'a>  SearchEngine{
+impl<'a> SearchEngine {
     pub fn new(index_path: String, config: Option<TokenizerConfig>) -> std::io::Result<Self> {
         let documents_store = if LocalStore::exists(&index_path) {
             // Try to load the existing store
@@ -24,11 +32,11 @@ impl<'a>  SearchEngine{
         } else {
             DocumentStore::new(config)
         };
-        let index_path =  index_path;
+        let index_path = index_path;
 
         Ok(Self {
             index_path,
-           documents_store,
+            documents_store,
         })
     }
 
@@ -43,7 +51,7 @@ impl<'a>  SearchEngine{
         Ok(id)
     }
 
-   pub fn query_service(&self) -> QueryService<'_> {
+    pub fn query_service(&self) -> QueryService<'_> {
         QueryService::new(&self.documents_store)
     }
 

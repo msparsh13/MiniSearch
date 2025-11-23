@@ -1,5 +1,6 @@
 use crate::index::b_tree::ValueTreeIndex;
 use crate::index::documents_store;
+use crate::index::forward_indexer::{ForwardDoc, ForwardIndex};
 use crate::index::inverted_index::{self, InvertedIndex};
 use crate::index::n_gram_index::{self, NgramIndex};
 use crate::index::n_gram_trie::{self, NgramTrie};
@@ -43,6 +44,7 @@ pub struct DocumentStore {
     pub n_gram_index: Option<NgramIndex>,
     pub n_gram_trie: Option<NgramTrie>,
     pub value_tree: ValueTreeIndex,
+    pub forward_index: ForwardIndex,
 }
 
 impl DocumentStore {
@@ -70,6 +72,9 @@ impl DocumentStore {
                 None
             },
             value_tree: ValueTreeIndex::new(),
+            forward_index: ForwardIndex {
+                docs: HashMap::new(),
+            },
         }
     }
 
@@ -87,10 +92,10 @@ impl DocumentStore {
 
         let doc = Document {
             id: id.clone(),
-            data : data.clone(),
+            data: data.clone(),
         };
         self.store.insert(id.clone(), doc);
-        self.index_document(&id , &data ,max_depth);
+        self.index_document(&id, &data, max_depth);
         id
     }
 
@@ -131,8 +136,10 @@ impl DocumentStore {
         max_depth: usize,
     ) {
         let mut texts = Vec::new();
-        self.extract_text(data, "", 0, max_depth, &mut texts);
-
+        let mut forwards = ForwardDoc::new();
+        print!("{:?}", forwards);
+        self.extract_text(data, "", 0, max_depth, &mut texts, &mut forwards);
+        self.forward_index.add_doc(doc_id, forwards);
         for (pos, (text, field_path)) in texts.iter().enumerate() {
             let (tokenized_words, tokenized_ngrams) =
                 self.tokenizer.tokenize(text, self.allow_ngram);
@@ -156,13 +163,51 @@ impl DocumentStore {
     }
 
     // Recursively extract text for indexing
+    // fn extract_text(
+    //     &mut self,
+    //     data: &HashMap<String, Value>,
+    //     prefix: &str,
+    //     current_depth: usize,
+    //     max_depth: usize,
+    //     output: &mut Vec<(String, String)>,
+    // ) {
+    //     if current_depth > max_depth {
+    //         return;
+    //     }
+
+    //     for (key, value) in data.iter() {
+    //         let field_path = if prefix.is_empty() {
+    //             key.clone()
+    //         } else {
+    //             format!("{}.{}", prefix, key)
+    //         };
+    //         output.push((key.clone(), field_path.clone()));
+    //         match value {
+    //             Value::Text(t) => output.push((t.clone(), field_path)),
+    //             Value::Number(n) => {
+    //                 self.value_tree.add_index(&field_path, value, key);
+    //                 output.push((n.to_string(), field_path))
+    //             }
+    //             Value::Date(d) => {
+    //                 self.value_tree.add_index(&field_path, value, key);
+    //                 output.push((d.clone(), field_path))
+    //             }
+
+    //             Value::Object(obj) => {
+    //                 Self::extract_text(self, obj, &field_path, current_depth + 1, max_depth, output)
+    //             }
+    //         }
+    //     }
+    // }
+
     fn extract_text(
         &mut self,
         data: &HashMap<String, Value>,
         prefix: &str,
         current_depth: usize,
         max_depth: usize,
-        output: &mut Vec<(String, String)>,
+        out_terms: &mut Vec<(String, String)>,
+        forward: &mut ForwardDoc,
     ) {
         if current_depth > max_depth {
             return;
@@ -174,25 +219,42 @@ impl DocumentStore {
             } else {
                 format!("{}.{}", prefix, key)
             };
-            output.push((key.clone(), field_path.clone()));
+
             match value {
-                Value::Text(t) => output.push((t.clone(), field_path)),
-                Value::Number(n) => {
-                    self.value_tree.add_index(&field_path, value, key);
-                    output.push((n.to_string(), field_path))
+                Value::Text(t) => {
+                    // store into forward doc
+                    forward.text_fields.insert(field_path.clone(), t.clone());
+
+                    // also push to inverted index extraction
+                    out_terms.push((t.clone(), field_path));
                 }
-                Value::Date(d) => {
+
+                Value::Number(n) => {
+                    forward.numeric_fields.insert(field_path.clone(), *n);
+
                     self.value_tree.add_index(&field_path, value, key);
-                    output.push((d.clone(), field_path))
+                    out_terms.push((n.to_string(), field_path));
+                }
+
+                Value::Date(d) => {
+                    forward.date_fields.insert(field_path.clone(), d.clone());
+
+                    self.value_tree.add_index(&field_path, value, key);
+                    out_terms.push((d.clone(), field_path));
                 }
 
                 Value::Object(obj) => {
-                    Self::extract_text(self, obj, &field_path, current_depth + 1, max_depth, output)
+                    Self::extract_text(
+                        self,
+                        obj,
+                        &field_path,
+                        current_depth + 1,
+                        max_depth,
+                        out_terms,
+                        forward,
+                    );
                 }
             }
         }
     }
-
-  
-
- }
+}
