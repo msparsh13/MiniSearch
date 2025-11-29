@@ -6,8 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::index::value::Value;
 
-
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValueTreeIndex {
     // field_path -> BTreeMap<normalized_value, Vec<(doc_id, field_path)>>
@@ -108,12 +106,12 @@ impl ValueTreeIndex {
 
     pub fn remove_index(&mut self, field_path: &str, value: &Value, doc_id: &str) {
         let Some(key) = Self::normalize_numeric(value) else {
-            return; 
+            return;
         };
 
         if let Some(tree) = self.data.get_mut(field_path) {
             if let Some(vec) = tree.get_mut(&key) {
-               vec.retain(|(d, _)| d != doc_id);
+                vec.retain(|(d, _)| d != doc_id);
                 if vec.is_empty() {
                     tree.remove(&key);
                 }

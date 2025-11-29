@@ -1,11 +1,13 @@
-use crate::index::b_tree::ValueTreeIndex;
 use crate::index::documents_store;
 use crate::index::forward_indexer::{ForwardDoc, ForwardIndex};
-use crate::index::inverted_index::{self, InvertedIndex};
-use crate::index::n_gram_index::{self, NgramIndex};
-use crate::index::n_gram_trie::{self, NgramTrie};
-use crate::index::tokenizer::{self, Tokenizer, TokenizerConfig};
+
+use crate::index::inverted_index::inverted_index::InvertedIndex;
+
+use crate::index::n_gram::n_gram_index::NgramIndex;
+use crate::index::n_gram::n_gram_trie::NgramTrie;
+use crate::index::tokenizer::tokenizer::{Tokenizer, TokenizerConfig};
 use crate::index::value::Value;
+use crate::index::value_tree::b_tree::ValueTreeIndex;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -284,9 +286,4 @@ impl DocumentStore {
         self.forward_index.remove(doc_id);
         self.store.remove(doc_id);
     }
-
-
-    
 }
-
-

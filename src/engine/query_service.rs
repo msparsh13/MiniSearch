@@ -7,12 +7,11 @@ use ordered_float::OrderedFloat;
 use regex::SetMatches;
 
 use crate::index::{
-    b_tree::ValueTreeIndex,
     documents_store::{Document, DocumentStore},
-    inverted_index::InvertedIndex,
-    n_gram_index::NgramIndex,
-    n_gram_trie::NgramTrie,
-    tokenizer::{Tokenizer, TokenizerConfig},
+    inverted_index::inverted_index::InvertedIndex,
+    n_gram::{n_gram_index::NgramIndex, n_gram_trie::NgramTrie},
+    tokenizer::tokenizer::Tokenizer,
+    value_tree::b_tree::ValueTreeIndex,
 };
 
 pub struct QueryService<'a> {

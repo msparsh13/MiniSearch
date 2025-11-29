@@ -10,8 +10,6 @@ pub enum Value {
     Object(HashMap<String, Value>),
 }
 
-
-
 impl Value {
     pub fn validate(&self) -> Result<(), String> {
         match self {
@@ -24,7 +22,7 @@ impl Value {
                     if key.is_empty() {
                         return Err("Field name cannot be empty".into());
                     }
-                    val.validate()?; 
+                    val.validate()?;
                 }
                 Ok(())
             }

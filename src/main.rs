@@ -1,18 +1,10 @@
-mod index;
-mod storage;
-mod utils;
-
-use crate::index::search_engine::SearchEngine;
-use crate::index::value::Value;
-use crate::{
-    index::{
-        documents_store::{DocumentStore},
-        tokenizer::TokenizerConfig,
-    },
-};
 use std::collections::HashMap;
-use std::{env, fs};
 use std::path::Path;
+use std::{env, fs};
+
+use mini_opensearch_api::engine::search_engine::SearchEngine;
+use mini_opensearch_api::index::tokenizer::tokenizer::TokenizerConfig;
+use mini_opensearch_api::index::value::Value;
 /*
  * TODO:
  * Objects within objects not being read make them read by inverted index :: fixed
@@ -38,17 +30,17 @@ fn main() -> std::io::Result<()> {
         max_ngram: Some(5),
     };
 
-   let index_path = env::var("INDEX_DIR").unwrap_or_else(|_| "./data/data.json".into());
+    let index_path = env::var("INDEX_DIR").unwrap_or_else(|_| "./data/data.json".into());
     // let commit_log_path = env::var("COMMIT_DIR").unwrap_or_else(|_| "./commit_logs/commits.logs".into());
-    let commit_log_path = env::var("COMMIT_DIR")
-    .unwrap_or_else(|_| "./commit_logs/commits.logs".into());
+    let commit_log_path =
+        env::var("COMMIT_DIR").unwrap_or_else(|_| "./commit_logs/commits.log".into());
 
-// Ensure parent directory exists
-if let Some(parent) = Path::new(&commit_log_path).parent() {
-    fs::create_dir_all(parent)?; // creates all missing directories
-}
+    // Ensure parent directory exists
+    if let Some(parent) = Path::new(&commit_log_path).parent() {
+        fs::create_dir_all(parent)?; // creates all missing directories
+    }
     // ✅ Use SearchEngine instead of manual DocumentStore
-    let mut engine = SearchEngine::new(index_path,commit_log_path, Some(config))?;
+    let mut engine = SearchEngine::new(index_path, commit_log_path, Some(config))?;
 
     // Small helper to add & index a document via SearchEngine
     fn add_and_index(
@@ -78,7 +70,7 @@ if let Some(parent) = Path::new(&commit_log_path).parent() {
     inner.insert("Shoutmon".to_string(), Value::Text("digimon".to_string()));
     attributes.insert("KEY".to_string(), Value::Object(inner));
     doc2.insert("attributes".to_string(), Value::Object(attributes));
-     let doc2_id = add_and_index(&mut engine, doc2, 4)?;
+    let doc2_id = add_and_index(&mut engine, doc2, 4)?;
     // println!("Added doc2 id = {}", doc2_id);
 
     // --- Document 3 (trainer + nested Pokémon)

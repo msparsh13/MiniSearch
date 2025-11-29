@@ -3,7 +3,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufRead, Seek, SeekFrom, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::index::documents_store::{DocumentStore};
+use crate::index::documents_store::DocumentStore;
 use crate::index::value::Value;
 use crate::utils::validator::validate_document;
 use std::collections::HashMap;
@@ -32,9 +32,6 @@ pub struct CommitManager {
 }
 
 impl CommitManager {
-
-
-
     pub fn new(log_path: &str) -> Self {
         let file = OpenOptions::new()
             .create(true)
@@ -86,7 +83,6 @@ impl CommitManager {
         //validation small for now
         validate_document(&data);
         let id = format!("{}", store.store.len() + 1);
-      
 
         let commit = self.create_commit(CommitOp::Add {
             id: id.clone(),
@@ -159,5 +155,4 @@ impl CommitManager {
             }
         }
     }
-
 }
