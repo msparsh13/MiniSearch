@@ -4,7 +4,9 @@ use std::ops::RangeInclusive;
 
 use serde::{Deserialize, Serialize};
 
-use crate::index::documents_store::Value;
+use crate::index::value::Value;
+
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValueTreeIndex {
@@ -101,6 +103,25 @@ impl ValueTreeIndex {
                 .collect()
         } else {
             Vec::new()
+        }
+    }
+
+    pub fn remove_index(&mut self, field_path: &str, value: &Value, doc_id: &str) {
+        let Some(key) = Self::normalize_numeric(value) else {
+            return; 
+        };
+
+        if let Some(tree) = self.data.get_mut(field_path) {
+            if let Some(vec) = tree.get_mut(&key) {
+               vec.retain(|(d, _)| d != doc_id);
+                if vec.is_empty() {
+                    tree.remove(&key);
+                }
+            }
+
+            if tree.is_empty() {
+                self.data.remove(field_path);
+            }
         }
     }
 }

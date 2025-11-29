@@ -1,19 +1,18 @@
 mod index;
 mod storage;
+mod utils;
 
-use crate::index::query_service;
 use crate::index::search_engine::SearchEngine;
-use crate::storage::local_store::LocalStore;
+use crate::index::value::Value;
 use crate::{
     index::{
-        documents_store::{DocumentStore, Value},
-        inverted_index,
-        query_service::QueryService,
+        documents_store::{DocumentStore},
         tokenizer::TokenizerConfig,
     },
-    storage::local_store,
 };
 use std::collections::HashMap;
+use std::{env, fs};
+use std::path::Path;
 /*
  * TODO:
  * Objects within objects not being read make them read by inverted index :: fixed
@@ -28,6 +27,8 @@ use std::collections::HashMap;
  * Proper Date normalization
  * Proper delete step 1 using forward index
  * Proper update step using delete and add [no partial update]
+ * for delete check forward index to get data for delete then go through all inverted index and ngram trie and value tree to delete those value
+ * in ngram trie remove field path if no paths are empty delete that node
  */
 fn main() -> std::io::Result<()> {
     // tokenizer config (ngrams/stemming)
@@ -37,10 +38,17 @@ fn main() -> std::io::Result<()> {
         max_ngram: Some(5),
     };
 
-    let index_path = "./data/data.json".to_string();
+   let index_path = env::var("INDEX_DIR").unwrap_or_else(|_| "./data/data.json".into());
+    // let commit_log_path = env::var("COMMIT_DIR").unwrap_or_else(|_| "./commit_logs/commits.logs".into());
+    let commit_log_path = env::var("COMMIT_DIR")
+    .unwrap_or_else(|_| "./commit_logs/commits.logs".into());
 
+// Ensure parent directory exists
+if let Some(parent) = Path::new(&commit_log_path).parent() {
+    fs::create_dir_all(parent)?; // creates all missing directories
+}
     // ✅ Use SearchEngine instead of manual DocumentStore
-    let mut engine = SearchEngine::new(index_path, Some(config))?;
+    let mut engine = SearchEngine::new(index_path,commit_log_path, Some(config))?;
 
     // Small helper to add & index a document via SearchEngine
     fn add_and_index(
@@ -57,7 +65,7 @@ fn main() -> std::io::Result<()> {
         "text".to_string(),
         Value::Text("Rust programming is fun".to_string()),
     );
-    // let doc1_id = add_and_index(&mut engine, doc1, 2)?;
+    let doc1_id = add_and_index(&mut engine, doc1, 2)?;
     // println!("Added doc1 id = {}", doc1_id);
 
     // --- Document 2 (attributes + nested map)
@@ -70,7 +78,7 @@ fn main() -> std::io::Result<()> {
     inner.insert("Shoutmon".to_string(), Value::Text("digimon".to_string()));
     attributes.insert("KEY".to_string(), Value::Object(inner));
     doc2.insert("attributes".to_string(), Value::Object(attributes));
-    // let doc2_id = add_and_index(&mut engine, doc2, 4)?;
+     let doc2_id = add_and_index(&mut engine, doc2, 4)?;
     // println!("Added doc2 id = {}", doc2_id);
 
     // --- Document 3 (trainer + nested Pokémon)
@@ -119,7 +127,7 @@ fn main() -> std::io::Result<()> {
         "tournament".to_string(),
         Value::Text("Indigo League".to_string()),
     );
-    // let doc3_id = add_and_index(&mut engine, doc3, 4)?;
+    let doc3_id = add_and_index(&mut engine, doc3, 4)?;
     // println!("Added doc3 id = {}", doc3_id);
 
     // You can still debug-print from the underlying store
@@ -142,9 +150,9 @@ fn main() -> std::io::Result<()> {
     let query_service = engine.query_service();
 
     // --- Basic term search
-    let term = "attack";
+    let term = "rust";
     let docs_with_term = query_service.get_words(vec![term]);
-    //println!("Documents containing '{}': {:?}", term, docs_with_term);
+    println!("Documents containing '{}': {:?}", term, docs_with_term);
 
     // --- N-gram BM25 search example
     let k1 = 1.2;
@@ -163,6 +171,7 @@ fn main() -> std::io::Result<()> {
     //         println!("  doc {} => score {:.6}", doc_id, score);
     //     }
     // }
+    let id = "1";
 
     // --- Range queries (numeric/date)
     let year_min = 2020 * 1000;
@@ -196,6 +205,8 @@ fn main() -> std::io::Result<()> {
     // println!("Finished checks. Inspect printed structures above for correctness.");
 
     // ✅ No need to manually call LocalStore::save here, SearchEngine already saves on add + close
+    engine.delete_document(id.to_owned());
+    println!("{:?}", engine.store().store);
     engine.close()?;
 
     Ok(())

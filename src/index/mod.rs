@@ -1,4 +1,5 @@
 pub mod b_tree;
+pub mod commit_manager;
 pub mod documents_store;
 pub mod forward_indexer;
 pub mod inverted_index;
@@ -7,3 +8,4 @@ pub mod n_gram_trie;
 pub mod query_service;
 pub mod search_engine;
 pub mod tokenizer;
+pub mod value;

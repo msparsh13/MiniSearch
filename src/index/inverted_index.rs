@@ -104,8 +104,12 @@ impl InvertedIndex {
     pub fn is_deleted(&self, doc_id: &str) -> bool {
         self.deleted_docs.contains(doc_id)
     }
+    pub fn remove_by_id(&mut self, doc_id: &str) {
+        self.deleted_docs.insert(doc_id.to_string());
+        self.delete_index();
+    }
 
-    pub fn compact_index(&mut self) {
+    pub fn delete_index(&mut self) {
         for postings in self.index.values_mut() {
             for doc_id in &self.deleted_docs {
                 postings.remove(doc_id);

@@ -5,6 +5,7 @@ use crate::index::inverted_index::{self, InvertedIndex};
 use crate::index::n_gram_index::{self, NgramIndex};
 use crate::index::n_gram_trie::{self, NgramTrie};
 use crate::index::tokenizer::{self, Tokenizer, TokenizerConfig};
+use crate::index::value::Value;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -19,14 +20,6 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
  * for n gram make it efficient by getting intersection of words :fixed
  * id string :fixed
  */
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Value {
-    Text(String),
-    Number(f64),
-    Date(String),
-    Object(HashMap<String, Value>),
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Document {
@@ -144,12 +137,10 @@ impl DocumentStore {
             let (tokenized_words, tokenized_ngrams) =
                 self.tokenizer.tokenize(text, self.allow_ngram);
 
-            // 1️⃣ Index words
             for w in &tokenized_words {
                 self.normal_index.add_term(w, doc_id, pos, &field_path);
             }
 
-            // 2️⃣ Index n-grams (if enabled)
             if let Some(ref word_ngrams) = tokenized_ngrams {
                 if let Some(ref mut n_index) = self.n_gram_trie {
                     for wn in word_ngrams {
@@ -199,7 +190,6 @@ impl DocumentStore {
     //         }
     //     }
     // }
-
     fn extract_text(
         &mut self,
         data: &HashMap<String, Value>,
@@ -257,4 +247,46 @@ impl DocumentStore {
             }
         }
     }
+
+    pub fn delete_index(&mut self, doc_id: &str) {
+        // 1️⃣ Get forward document
+        let Some(forward_doc) = self.forward_index.get(doc_id).cloned() else {
+            return; // nothing to delete
+        };
+
+        for (field_path, text_value) in forward_doc.text_fields {
+            let (words, ngrams_opt) = self.tokenizer.tokenize(&text_value, self.allow_ngram);
+
+            for w in &words {
+                self.normal_index.remove_by_id(doc_id);
+            }
+
+            if let Some(ref mut trie) = self.n_gram_trie {
+                if let Some(ngrams_list) = ngrams_opt {
+                    for word_grams in ngrams_list {
+                        for gram in word_grams.ngrams {
+                            trie.remove_word(&gram, &word_grams.word);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (field_path, num_value) in &forward_doc.numeric_fields {
+            self.value_tree
+                .remove_index(field_path, &Value::Number(*num_value), doc_id);
+        }
+
+        for (field_path, date_value) in forward_doc.date_fields {
+            self.value_tree
+                .remove_index(&field_path, &Value::Date(date_value.to_string()), doc_id);
+        }
+        self.forward_index.remove(doc_id);
+        self.store.remove(doc_id);
+    }
+
+
+    
 }
+
+

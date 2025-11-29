@@ -61,4 +61,27 @@ impl NgramTrie {
             Self::collect_terms(child, result);
         }
     }
+
+    pub fn remove_word(&mut self, word: &str, term: &str) -> bool {
+        Self::remove_rec(&mut self.root, word, term, 0)
+    }
+
+    fn remove_rec(node: &mut TrieNode, word: &str, term: &str, idx: usize) -> bool {
+        if idx == word.len() {
+            node.terms.remove(term);
+            return node.terms.is_empty() && node.children.is_empty();
+        }
+
+        let ch = word.chars().nth(idx).unwrap();
+
+        if let Some(child) = node.children.get_mut(&ch) {
+            let should_delete_child = Self::remove_rec(child, word, term, idx + 1);
+
+            if should_delete_child {
+                node.children.remove(&ch);
+            }
+        }
+
+        node.terms.is_empty() && node.children.is_empty()
+    }
 }
