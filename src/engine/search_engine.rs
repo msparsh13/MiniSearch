@@ -3,13 +3,19 @@ use std::collections::HashMap;
 use crate::{
     commits::commit_manager::CommitManager,
     engine::query_service::QueryService,
-    index::{documents_store::DocumentStore, tokenizer::tokenizer::TokenizerConfig, value::Value},
+    index::{
+        documents_store::{self, Document, DocumentStore},
+        tokenizer::tokenizer::TokenizerConfig,
+        value::Value,
+    },
+    snapshots::snapshot_manager::{self, Snapshot, SnapshotManager},
     storage::local_store::LocalStore,
 };
 
 pub struct SearchEngine {
     index_path: String,
     commit_log_path: String,
+    snapshot_path: String,
     documents_store: DocumentStore,
     commit_manager: CommitManager,
 }
@@ -39,39 +45,83 @@ impl<'a> SearchEngine {
     //     })
     // }
 
+    // pub fn new(
+    //     index_path: String,
+    //     commit_log_path: String,
+    //     snapshot_path: String,
+    //     config: Option<TokenizerConfig>,
+    // ) -> std::io::Result<Self> {
+    //     // 1. Load or create DocumentStore snapshot
+    //     let documents_store = if LocalStore::exists(&index_path) {
+    //         match LocalStore::load::<DocumentStore>(&index_path) {
+    //             Ok(store) => store,
+    //             Err(err) => {
+    //                 eprintln!(
+    //                     "Failed to load DocumentStore from {}: {}. Creating a new one.",
+    //                     index_path, err
+    //                 );
+    //                 DocumentStore::new(config)
+    //             }
+    //         }
+    //     } else {
+    //         DocumentStore::new(config)
+    //     };
+
+    //     let mut commit_manager = CommitManager::new(&commit_log_path, &snapshot_path, 3);
+
+    //     // 2. Replay commit log on top of snapshot
+    //     //    This makes snapshot + log = final truth
+    //     let mut store = documents_store;
+    //     commit_manager.replay(&mut store);
+
+    //     Ok(Self {
+    //         index_path,
+    //         documents_store: store,
+    //         commit_manager,
+    //         commit_log_path,
+    //         snapshot_path,
+    //     })
+    // }
+
     pub fn new(
         index_path: String,
         commit_log_path: String,
+        snapshot_path: String,
         config: Option<TokenizerConfig>,
     ) -> std::io::Result<Self> {
-        // 1. Load or create DocumentStore snapshot
-        let documents_store = if LocalStore::exists(&index_path) {
-            match LocalStore::load::<DocumentStore>(&index_path) {
+        // 1️⃣ Load just the documents from index_path
+        let docs_store: HashMap<String, Document> = if LocalStore::exists(&index_path) {
+            match LocalStore::load(&index_path) {
                 Ok(store) => store,
                 Err(err) => {
                     eprintln!(
-                        "Failed to load DocumentStore from {}: {}. Creating a new one.",
+                        "Failed to load documents from {}: {}. Creating empty store.",
                         index_path, err
                     );
-                    DocumentStore::new(config)
+                    HashMap::new()
                 }
             }
         } else {
-            DocumentStore::new(config)
+            HashMap::new()
         };
 
-        let mut commit_manager = CommitManager::new(&commit_log_path);
+        // 2️⃣ Initialize DocumentStore with config and loaded docs
+        let mut documents_store = DocumentStore::new(config);
+        documents_store.store = docs_store;
 
-        // 2. Replay commit log on top of snapshot
-        //    This makes snapshot + log = final truth
-        let mut store = documents_store;
-        commit_manager.replay(&mut store);
+        // 3️⃣ Initialize CommitManager with snapshot support
+        let mut commit_manager = CommitManager::new(&commit_log_path, &snapshot_path, 3);
+
+        // 4️⃣ Replay commits and load latest snapshot
+
+        commit_manager.replay_withSnapshot(&mut documents_store);
 
         Ok(Self {
             index_path,
-            documents_store: store,
+            documents_store,
             commit_manager,
             commit_log_path,
+            snapshot_path,
         })
     }
 
@@ -80,18 +130,24 @@ impl<'a> SearchEngine {
         data: HashMap<String, Value>,
         max_depth: Option<usize>,
     ) -> std::io::Result<String> {
-        let id = self
+        // 1️⃣ Append the document via CommitManager
+        let doc_id = self
             .commit_manager
-            .add_document(&mut self.documents_store, data, max_depth);
-        LocalStore::save(&self.documents_store, &self.index_path)?;
+            .add_document(&mut self.documents_store, &data, max_depth);
 
-        Ok(id)
+        LocalStore::save(&self.documents_store.store, &self.index_path)?;
+
+        // 3️⃣ Create a snapshot every 1000 commits
+
+        Ok(doc_id)
     }
 
     pub fn delete_document(&mut self, doc_id: String) -> std::io::Result<String> {
         let id = self
             .commit_manager
             .delete_document(&mut self.documents_store, &doc_id);
+
+        LocalStore::save(&self.documents_store.store, &self.index_path)?;
 
         Ok(doc_id)
     }
@@ -101,7 +157,7 @@ impl<'a> SearchEngine {
     }
 
     pub fn close(&self) -> std::io::Result<()> {
-        LocalStore::save(&self.documents_store, &self.index_path)
+        LocalStore::save(&self.documents_store.store, &self.index_path)
     }
 
     pub fn store(&self) -> &DocumentStore {

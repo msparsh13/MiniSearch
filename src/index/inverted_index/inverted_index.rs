@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Posting {
     pub positions: Vec<usize>,
     pub term_freq: usize,
     pub field_paths: HashSet<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InvertedIndex {
     index: HashMap<String, HashMap<String, Posting>>,
     deleted_docs: HashSet<String>,

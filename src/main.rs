@@ -17,10 +17,9 @@ use mini_opensearch_api::index::value::Value;
  *  we can add more complex function like search attribute names not search them to add flexibility :fixed
  * now time to make complex queries > < smth : fixed
  * Proper Date normalization
- * Proper delete step 1 using forward index
- * Proper update step using delete and add [no partial update]
- * for delete check forward index to get data for delete then go through all inverted index and ngram trie and value tree to delete those value
- * in ngram trie remove field path if no paths are empty delete that node
+ * Proper delete step 1 using forward index :: ficed
+ * Proper update step using delete and add [no partial update] fixed
+ * to do remove localstore for document_store use it as file store and store snapshots using it
  */
 fn main() -> std::io::Result<()> {
     // tokenizer config (ngrams/stemming)
@@ -35,12 +34,18 @@ fn main() -> std::io::Result<()> {
     let commit_log_path =
         env::var("COMMIT_DIR").unwrap_or_else(|_| "./commit_logs/commits.log".into());
 
+    let snapshots_path =
+        env::var("SNAPSHOTS_DIR").unwrap_or_else(|_| "./snapshots_dir/snapshots".into());
+
     // Ensure parent directory exists
     if let Some(parent) = Path::new(&commit_log_path).parent() {
         fs::create_dir_all(parent)?; // creates all missing directories
     }
+    if let Some(parent) = Path::new(&snapshots_path).parent() {
+        fs::create_dir_all(parent)?; // creates all missing directories
+    }
     // ✅ Use SearchEngine instead of manual DocumentStore
-    let mut engine = SearchEngine::new(index_path, commit_log_path, Some(config))?;
+    let mut engine = SearchEngine::new(index_path, commit_log_path, snapshots_path, Some(config))?;
 
     // Small helper to add & index a document via SearchEngine
     fn add_and_index(
@@ -199,7 +204,7 @@ fn main() -> std::io::Result<()> {
     // ✅ No need to manually call LocalStore::save here, SearchEngine already saves on add + close
     engine.delete_document(id.to_owned());
     println!("{:?}", engine.store().store);
-    engine.close()?;
+    //engine.close()?;
 
     Ok(())
 }

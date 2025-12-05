@@ -8,6 +8,7 @@ use crate::index::n_gram::n_gram_trie::NgramTrie;
 use crate::index::tokenizer::tokenizer::{Tokenizer, TokenizerConfig};
 use crate::index::value::Value;
 use crate::index::value_tree::b_tree::ValueTreeIndex;
+use crate::snapshots::snapshot_manager::Snapshot;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -75,22 +76,23 @@ impl DocumentStore {
 
     pub fn add_document(
         &mut self,
-        mut data: HashMap<String, Value>,
+        mut data: &HashMap<String, Value>,
         max_depth: Option<usize>,
     ) -> String {
         let id = format!("{}", self.store.len() + 1);
         let max_depth = max_depth.unwrap_or(1);
 
-        for (_, value) in data.iter_mut() {
+        let mut normalized = data.clone(); // clone only once
+        for (_, value) in normalized.iter_mut() {
             Self::normalize_value(value, max_depth);
         }
 
         let doc = Document {
             id: id.clone(),
-            data: data.clone(),
+            data: normalized.clone(),
         };
         self.store.insert(id.clone(), doc);
-        self.index_document(&id, &data, max_depth);
+        self.index_document(&id, &normalized, max_depth);
         id
     }
 
@@ -132,7 +134,6 @@ impl DocumentStore {
     ) {
         let mut texts = Vec::new();
         let mut forwards = ForwardDoc::new();
-        print!("{:?}", forwards);
         self.extract_text(data, "", 0, max_depth, &mut texts, &mut forwards);
         self.forward_index.add_doc(doc_id, forwards);
         for (pos, (text, field_path)) in texts.iter().enumerate() {
@@ -256,7 +257,7 @@ impl DocumentStore {
             return; // nothing to delete
         };
 
-        for (field_path, text_value) in forward_doc.text_fields {
+        for (_field_path, text_value) in forward_doc.text_fields {
             let (words, ngrams_opt) = self.tokenizer.tokenize(&text_value, self.allow_ngram);
 
             for w in &words {
@@ -285,5 +286,40 @@ impl DocumentStore {
         }
         self.forward_index.remove(doc_id);
         self.store.remove(doc_id);
+    }
+
+    pub fn load_snapshot(&mut self, snap: Snapshot) {
+        self.normal_index = snap.normal_index;
+        self.value_tree = snap.value_tree;
+        self.forward_index = snap.forward_index;
+        self.n_gram_index = snap.n_gram_index;
+        self.n_gram_trie = snap.n_gram_trie;
+        self.allow_ngram = snap.allow_ngram;
+    }
+
+    pub fn to_snapshot(&self) -> Snapshot {
+        Snapshot {
+            normal_index: self.normal_index.clone(),
+            value_tree: self.value_tree.clone(),
+            forward_index: self.forward_index.clone(),
+            n_gram_index: self.n_gram_index.clone(),
+            n_gram_trie: self.n_gram_trie.clone(),
+            allow_ngram: self.allow_ngram.clone(),
+            last_commit_id: (self.store.len() + 1).to_string(),
+        }
+    }
+}
+impl Clone for DocumentStore {
+    fn clone(&self) -> Self {
+        DocumentStore {
+            store: self.store.clone(),
+            tokenizer: Tokenizer::new(Default::default()),
+            allow_ngram: self.allow_ngram,
+            normal_index: self.normal_index.clone(),
+            n_gram_index: self.n_gram_index.clone(),
+            n_gram_trie: self.n_gram_trie.clone(),
+            value_tree: self.value_tree.clone(),
+            forward_index: self.forward_index.clone(),
+        }
     }
 }

@@ -1,5 +1,6 @@
 use serde::{Serialize, de::DeserializeOwned};
 use std::fs::{self, File};
+use std::io::Write;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
 
@@ -15,10 +16,15 @@ impl LocalStore {
         }
 
         let file = File::create(path_ref)?;
-        let writer = BufWriter::new(file);
+        let mut writer = BufWriter::new(&file);
 
-        serde_json::to_writer_pretty(writer, data)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        serde_json::to_writer_pretty(&mut writer, data)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?; // pretty for dev purposes
+
+        writer.flush()?; // flush BufWriter
+        file.sync_all()?; // ensure file is persisted
+
+        Ok(())
     }
 
     /// Load JSON data from the given path and deserialize it into the provided type.

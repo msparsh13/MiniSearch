@@ -1,8 +1,8 @@
 use regex::Regex;
 use rust_stemmers::{Algorithm, Stemmer};
-use std::fmt;
+use std::{clone, fmt};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TokenizerConfig {
     pub use_stemming: bool,
     pub min_ngram: Option<usize>,
