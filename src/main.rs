@@ -203,8 +203,8 @@ fn main() -> std::io::Result<()> {
 
     // ✅ No need to manually call LocalStore::save here, SearchEngine already saves on add + close
     engine.delete_document(id.to_owned());
-    println!("{:?}", engine.store().store);
-    //engine.close()?;
+   // println!("{:?}", engine.store().store);
+    print!("{:?}",engine.query_service().get_words(["rust"].to_vec()));
 
     Ok(())
 }

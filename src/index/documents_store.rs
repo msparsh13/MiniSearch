@@ -1,15 +1,13 @@
 use crate::index::documents_store;
 use crate::index::forward_indexer::{ForwardDoc, ForwardIndex};
-
 use crate::index::inverted_index::inverted_index::InvertedIndex;
-
 use crate::index::n_gram::n_gram_index::NgramIndex;
 use crate::index::n_gram::n_gram_trie::NgramTrie;
 use crate::index::tokenizer::tokenizer::{Tokenizer, TokenizerConfig};
 use crate::index::value::Value;
 use crate::index::value_tree::b_tree::ValueTreeIndex;
 use crate::snapshots::snapshot_manager::Snapshot;
-use ordered_float::OrderedFloat;
+use crate::utils::date_normalizer::{self, normalize_date};
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
@@ -115,7 +113,9 @@ impl DocumentStore {
             }
             Value::Number(_) => { /* nothing to do */ }
             Value::Date(s) => {
-                *s = s.trim().to_string(); // can normalize date format if needed
+               if let Some(v) = normalize_date(s) {
+                *s = v;
+    }
             }
             Value::Object(obj) => {
                 // print!("{:?}",obj);

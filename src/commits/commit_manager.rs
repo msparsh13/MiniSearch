@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::index::documents_store::DocumentStore;
 use crate::index::value::Value;
 use crate::snapshots::snapshot_manager::SnapshotManager;
+use crate::utils::date_normalizer;
 use crate::utils::validator::validate_document;
 use std::collections::HashMap;
 
@@ -86,6 +87,7 @@ impl CommitManager {
     ) -> String {
         //validation small for now
         validate_document(&data);
+  
         let id = format!("{}", store.store.len() + 1);
 
         let commit = self.create_commit(CommitOp::Add {
@@ -109,11 +111,12 @@ impl CommitManager {
         let commit = self.create_commit(CommitOp::Delete { id: id.to_string() });
         self.append_to_log(&commit);
 
-        if (commit.id % 1 == 0) {
+       
+       store.delete_index(id);
+         if (commit.id % 1 == 0) {
             let snapshot = store.to_snapshot();
             self.snapshot_manager.save(&snapshot);
         }
-        store.delete_index(id);
     }
 
     /// Replay log on startup
