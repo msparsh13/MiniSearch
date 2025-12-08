@@ -1,0 +1,189 @@
+[
+  {
+    "title": "Newton's Second Law",
+    "category": "Mechanics",
+    "formula": "F = m * a",
+    "description": "Defines the relationship between force, mass, and acceleration.",
+    "year": 1687,
+    "scientist": "Isaac Newton"
+  },
+  {
+    "title": "Gravitational Potential Energy",
+    "category": "Mechanics",
+    "formula": "U = m * g * h",
+    "description": "Energy due to position in a gravitational field.",
+    "example_value": 294,
+    "units": "Joules"
+  },
+  {
+    "title": "Coulomb's Law",
+    "category": "Electromagnetism",
+    "formula": "F = k * q1 * q2 / r^2",
+    "constant_k": 8.99e9,
+    "units": "N*m^2/C^2"
+  },
+  {
+    "title": "Photoelectric Effect",
+    "category": "Quantum Physics",
+    "threshold_frequency": 5.2e14,
+    "discovered_by": "Albert Einstein",
+    "year": 1905
+  },
+  {
+    "title": "Ohm's Law",
+    "category": "Electromagnetism",
+    "formula": "V = I * R",
+    "units": {
+      "voltage": "V",
+      "current": "A",
+      "resistance": "Ω"
+    }
+  },
+  {
+    "title": "Kinetic Energy",
+    "formula": "KE = 1/2 * m * v^2",
+    "category": "Mechanics",
+    "example_value": 500,
+    "units": "Joules"
+  },
+  {
+    "title": "Hooke's Law",
+    "category": "Mechanics",
+    "formula": "F = k * x",
+    "description": "Restoring force of a spring proportional to displacement.",
+    "constant_k": 200,
+    "units": "N/m"
+  },
+  {
+    "title": "Einstein's Mass-Energy Equivalence",
+    "category": "Relativity",
+    "formula": "E = m * c^2",
+    "discovered_by": "Albert Einstein",
+    "year": 1905
+  },
+  {
+    "title": "Snell's Law",
+    "category": "Optics",
+    "formula": "n1 * sin(θ1) = n2 * sin(θ2)",
+    "description": "Describes refraction of light between media.",
+    "example_value": 30,
+    "units": "degrees"
+  },
+  {
+    "title": "Boyle's Law",
+    "category": "Thermodynamics",
+    "formula": "P * V = constant",
+    "description": "Pressure inversely proportional to volume at constant temperature.",
+    "example_value": 101325,
+    "units": "Pa"
+  },
+  {
+    "title": "Planck's Law",
+    "category": "Quantum Physics",
+    "formula": "E = h * f",
+    "constant_h": 6.626e-34,
+    "units": "J*s"
+  },
+  {
+    "title": "Faraday's Law of Induction",
+    "category": "Electromagnetism",
+    "formula": "EMF = -dΦ/dt",
+    "description": "Induced voltage proportional to rate of change of magnetic flux.",
+    "example_value": 12,
+    "units": "V"
+  },
+  {
+    "title": "Archimedes' Principle",
+    "category": "Fluid Mechanics",
+    "description": "Buoyant force equals the weight of displaced fluid.",
+    "example_value": 9.8,
+    "units": "N"
+  },
+  {
+    "title": "Bernoulli's Equation",
+    "category": "Fluid Mechanics",
+    "formula": "P + 1/2 * ρ * v^2 + ρ * g * h = constant",
+    "description": "Conservation of energy for flowing fluids.",
+    "units": "Pa"
+  },
+  {
+    "title": "Heisenberg Uncertainty Principle",
+    "category": "Quantum Physics",
+    "formula": "Δx * Δp ≥ ħ/2",
+    "constant_hbar": 1.054571e-34,
+    "description": "Limits precision of simultaneous position and momentum measurements."
+  },
+  {
+    "title": "Law of Conservation of Energy",
+    "category": "Mechanics",
+    "description": "Energy cannot be created or destroyed, only transformed.",
+    "example_value": 1000,
+    "units": "Joules"
+  },
+  {
+    "title": "Ideal Gas Law",
+    "category": "Thermodynamics",
+    "formula": "PV = nRT",
+    "constant_R": 8.314,
+    "units": {
+      "pressure": "Pa",
+      "volume": "m^3",
+      "temperature": "K"
+    }
+  },
+  {
+    "title": "Lorentz Force",
+    "category": "Electromagnetism",
+    "formula": "F = q(E + v × B)",
+    "description": "Force on a charged particle in electric and magnetic fields.",
+    "units": "N"
+  },
+  {
+    "title": "Lenz's Law",
+    "category": "Electromagnetism",
+    "description": "Induced current direction opposes change in magnetic flux."
+  },
+  {
+    "title": "Pascal's Law",
+    "category": "Fluid Mechanics",
+    "formula": "ΔP = ρ * g * Δh",
+    "description": "Pressure change transmitted undiminished in fluid."
+  },
+  {
+    "title": "Thermal Expansion",
+    "category": "Thermodynamics",
+    "formula": "ΔL = α * L * ΔT",
+    "description": "Change in length proportional to temperature change.",
+    "constant_alpha": 0.000012
+  },
+  {
+    "title": "Magnetic Flux",
+    "category": "Electromagnetism",
+    "formula": "Φ = B * A * cos(θ)",
+    "units": "Weber"
+  },
+  {
+    "title": "Elastic Potential Energy",
+    "category": "Mechanics",
+    "formula": "U = 1/2 * k * x^2",
+    "units": "Joules"
+  },
+  {
+    "title": "Wave Equation",
+    "category": "Mechanics",
+    "formula": "v = f * λ",
+    "description": "Relationship between wave speed, frequency, and wavelength."
+  },
+  {
+    "title": "Doppler Effect",
+    "category": "Waves",
+    "formula": "f' = f * (v ± v_observer)/(v ± v_source)",
+    "description": "Observed frequency changes when source or observer moves."
+  },
+  {
+    "title": "Simple Harmonic Motion",
+    "category": "Mechanics",
+    "formula": "x(t) = A * cos(ωt + φ)",
+    "description": "Periodic motion with restoring force proportional to displacement."
+  }
+]

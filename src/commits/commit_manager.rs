@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::fs::{File, OpenOptions};
-use std::io::{BufRead, Seek, SeekFrom, Write};
+use std::fs::{self, File, OpenOptions};
+use std::io::{BufRead, Read, Seek, SeekFrom, Write};
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::index::documents_store::DocumentStore;
 use crate::index::value::Value;
 use crate::snapshots::snapshot_manager::SnapshotManager;
+use crate::storage::local_store::LocalStore;
 use crate::utils::date_normalizer;
 use crate::utils::validator::validate_document;
 use std::collections::HashMap;
@@ -28,14 +30,40 @@ pub struct Commit {
     pub timestamp: u64,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Meta {
+    last_commit_id: u64,
+}
+
 pub struct CommitManager {
     log_file: File,
     next_commit_id: u64,
     snapshot_manager: SnapshotManager,
+    meta_path: String,
 }
 
 impl CommitManager {
     pub fn new(log_path: &str, snapshot_path: &str, count: u32) -> Self {
+        if let Some(parent) = Path::new(log_path).parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+
+        // Ensure snapshot folder exists
+        if let Some(parent) = Path::new(snapshot_path).parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+
+        // compute meta path once
+        let meta_path = Path::new(log_path)
+            .parent()
+            .unwrap()
+            .join("meta.json")
+            .to_string_lossy()
+            .to_string();
+
+        // load last commit id (returns last id); next id = last + 1
+        let next_id = Self::load_meta(&meta_path) + 1;
+
         let file = OpenOptions::new()
             .create(true)
             .read(true)
@@ -45,8 +73,9 @@ impl CommitManager {
 
         Self {
             log_file: file,
-            next_commit_id: 1,
+            next_commit_id: next_id,
             snapshot_manager: SnapshotManager::new(snapshot_path, count),
+            meta_path,
         }
     }
 
@@ -85,9 +114,8 @@ impl CommitManager {
         data: &HashMap<String, Value>,
         max_depth: Option<usize>,
     ) -> String {
-        //validation small for now
         validate_document(&data);
-  
+
         let id = format!("{}", store.store.len() + 1);
 
         let commit = self.create_commit(CommitOp::Add {
@@ -103,6 +131,8 @@ impl CommitManager {
             self.snapshot_manager.save(&snapshot);
         }
 
+        self.save_meta();
+
         id
     }
 
@@ -111,12 +141,13 @@ impl CommitManager {
         let commit = self.create_commit(CommitOp::Delete { id: id.to_string() });
         self.append_to_log(&commit);
 
-       
-       store.delete_index(id);
-         if (commit.id % 1 == 0) {
+        store.delete_index(id);
+        if (commit.id % 1 == 0) {
             let snapshot = store.to_snapshot();
             self.snapshot_manager.save(&snapshot);
         }
+
+        self.save_meta();
     }
 
     /// Replay log on startup
@@ -142,6 +173,8 @@ impl CommitManager {
                 }
             }
         }
+
+        self.save_meta();
     }
 
     pub fn rollback_to(&mut self, store: &mut DocumentStore, commit_id: u64) {
@@ -171,6 +204,9 @@ impl CommitManager {
                 }
             }
         }
+
+        self.next_commit_id = commit_id + 1;
+        self.save_meta();
     }
 
     pub fn replay_withSnapshot(&mut self, store: &mut DocumentStore) {
@@ -221,5 +257,48 @@ impl CommitManager {
                 }
             }
         }
+
+        self.save_meta();
+    }
+
+    // ---------- meta helpers (static + instance) ----------
+
+    fn write_meta_atomic(meta_path: &str, meta: &Meta) -> std::io::Result<()> {
+        let tmp = format!("{}.tmp", meta_path);
+        fs::write(&tmp, serde_json::to_string_pretty(meta).unwrap())?;
+        fs::rename(&tmp, meta_path)?;
+        Ok(())
+    }
+
+    fn load_meta(meta_path: &str) -> u64 {
+        // If file doesn't exist → initialize with 1
+        if !Path::new(meta_path).exists() {
+            let m = Meta { last_commit_id: 1 };
+            let _ = LocalStore::save(&m, meta_path);
+            return 1;
+        }
+
+        // Read file using LocalStore
+        if let Ok(m) = LocalStore::load::<Meta>(meta_path) {
+            m.last_commit_id
+        } else {
+            // Corrupt meta → reset
+            let m = Meta { last_commit_id: 1 };
+            let _ = LocalStore::save(&m, meta_path);
+            1
+        }
+    }
+
+    /// Save meta using LocalStore
+    fn save_meta(&self) {
+        let m = Meta {
+            last_commit_id: self.next_commit_id - 1, // last committed id
+        };
+        let _ = LocalStore::save(&m, &self.meta_path);
+
+        let m = Meta {
+            last_commit_id: self.next_commit_id - 1, // last committed id
+        };
+        let _ = Self::write_meta_atomic(&self.meta_path, &m);
     }
 }

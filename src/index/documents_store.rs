@@ -113,9 +113,9 @@ impl DocumentStore {
             }
             Value::Number(_) => { /* nothing to do */ }
             Value::Date(s) => {
-               if let Some(v) = normalize_date(s) {
-                *s = v;
-    }
+                if let Some(v) = normalize_date(s) {
+                    *s = v;
+                }
             }
             Value::Object(obj) => {
                 // print!("{:?}",obj);

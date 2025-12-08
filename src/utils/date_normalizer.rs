@@ -1,5 +1,5 @@
 pub fn normalize_date(date: &str) -> Option<String> {
-     let date = date.trim().replace('/', "-");
+    let date = date.trim().replace('/', "-");
     let parts: Vec<&str> = date.split('-').collect();
     if parts.len() != 3 {
         return None;

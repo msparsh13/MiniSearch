@@ -1,0 +1,114 @@
+[
+  {
+    "trainer": {
+      "name": "Ash Ketchum",
+      "hometown": "Pallet Town",
+      "team": {
+        "pikachu": {
+          "type": "Electric",
+          "generation": 1,
+          "stats": {
+            "hp": 35,
+            "attack": 55,
+            "defense": 40
+          },
+          "moves": {
+            "quick_attack": "Electric",
+            "thunderbolt": "Electric"
+          },
+          "abilities": {
+            "primary": "Static",
+            "hidden": "Lightning Rod"
+          }
+        }
+      }
+    },
+    "tournament": "Indigo League"
+  },
+  {
+    "trainer": {
+      "name": "Misty",
+      "hometown": "Cerulean City",
+      "team": {
+        "staryu": {
+          "type": "Water",
+          "generation": 1,
+          "stats": {
+            "hp": 30,
+            "attack": 45,
+            "defense": 55
+          },
+          "moves": {
+            "water_gun": "Water",
+            "rapid_spin": "Normal"
+          },
+          "abilities": {
+            "primary": "Illuminate",
+            "hidden": "Natural Cure"
+          }
+        },
+        "psyduck": {
+          "type": "Water",
+          "generation": 1,
+          "stats": {
+            "hp": 50,
+            "attack": 52,
+            "defense": 48
+          },
+          "moves": {
+            "confusion": "Psychic",
+            "water_pulse": "Water"
+          },
+          "abilities": {
+            "primary": "Damp",
+            "hidden": "Cloud Nine"
+          }
+        }
+      }
+    },
+    "tournament": "Johto League"
+  },
+  {
+    "trainer": {
+      "name": "Brock",
+      "hometown": "Pewter City",
+      "team": {
+        "onix": {
+          "type": "Rock/Ground",
+          "generation": 1,
+          "stats": {
+            "hp": 35,
+            "attack": 45,
+            "defense": 160
+          },
+          "moves": {
+            "rock_throw": "Rock",
+            "earthquake": "Ground"
+          },
+          "abilities": {
+            "primary": "Rock Head",
+            "hidden": "Sturdy"
+          }
+        },
+        "geodude": {
+          "type": "Rock/Ground",
+          "generation": 1,
+          "stats": {
+            "hp": 40,
+            "attack": 80,
+            "defense": 100
+          },
+          "moves": {
+            "tackle": "Normal",
+            "self_destruct": "Normal"
+          },
+          "abilities": {
+            "primary": "Rock Head",
+            "hidden": "Sturdy"
+          }
+        }
+      }
+    },
+    "tournament": "Kanto Gym Challenge"
+  }
+]

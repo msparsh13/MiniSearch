@@ -2,3 +2,5 @@
 /data
 /commit_logs
 /snapshots_dir
+/test_data
+/src/main_commands_test.rs
