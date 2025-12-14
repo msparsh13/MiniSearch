@@ -8,6 +8,7 @@ use crate::index::value::Value;
 use crate::index::value_tree::b_tree::ValueTreeIndex;
 use crate::snapshots::snapshot_manager::Snapshot;
 use crate::utils::date_normalizer::{self, normalize_date};
+use crate::utils::random_id::random_id;
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
@@ -74,11 +75,11 @@ impl DocumentStore {
 
     pub fn add_document(
         &mut self,
+        id: &str,
         mut data: &HashMap<String, Value>,
         max_depth: Option<usize>,
-    ) -> String {
-        let id = format!("{}", self.store.len() + 1);
-        let max_depth = max_depth.unwrap_or(1);
+    ) {
+        let max_depth = max_depth.unwrap_or(4);
 
         let mut normalized = data.clone(); // clone only once
         for (_, value) in normalized.iter_mut() {
@@ -86,12 +87,11 @@ impl DocumentStore {
         }
 
         let doc = Document {
-            id: id.clone(),
+            id: id.to_string(),
             data: normalized.clone(),
         };
-        self.store.insert(id.clone(), doc);
+        self.store.insert(id.to_string(), doc);
         self.index_document(&id, &normalized, max_depth);
-        id
     }
 
     pub fn get_document(&self, id: &str) -> Option<&Document> {

@@ -356,4 +356,8 @@ impl<'a> QueryService<'a> {
         doc_scores_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         doc_scores_vec
     }
+
+    pub fn get_doc_by_id(&self, id: &str) -> Option<&'a Document> {
+        self.store.get(id)
+    }
 }

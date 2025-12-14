@@ -9,6 +9,7 @@ use crate::index::value::Value;
 use crate::snapshots::snapshot_manager::SnapshotManager;
 use crate::storage::local_store::LocalStore;
 use crate::utils::date_normalizer;
+use crate::utils::random_id::random_id;
 use crate::utils::validator::validate_document;
 use std::collections::HashMap;
 
@@ -116,24 +117,24 @@ impl CommitManager {
     ) -> String {
         validate_document(&data);
 
-        let id = format!("{}", store.store.len() + 1);
+        let doc_id = random_id();
 
         let commit = self.create_commit(CommitOp::Add {
-            id: id.clone(),
+            id: doc_id.clone(),
             data: data.clone(),
         });
         self.append_to_log(&commit);
 
-        store.add_document(data, max_depth);
+        store.add_document(&doc_id, data, max_depth);
 
-        if (commit.id) % 1 == 0 {
+        if (commit.id) % 100 == 0 {
             let snapshot = store.to_snapshot();
             self.snapshot_manager.save(&snapshot);
         }
 
         self.save_meta();
 
-        id
+        doc_id
     }
 
     /// Public: Delete doc through commit manager
@@ -142,7 +143,7 @@ impl CommitManager {
         self.append_to_log(&commit);
 
         store.delete_index(id);
-        if (commit.id % 1 == 0) {
+        if (commit.id % 100 == 0) {
             let snapshot = store.to_snapshot();
             self.snapshot_manager.save(&snapshot);
         }
@@ -165,8 +166,8 @@ impl CommitManager {
             self.next_commit_id = commit.id + 1;
 
             match commit.op {
-                CommitOp::Add { id: _, data } => {
-                    store.add_document(&data, None);
+                CommitOp::Add { id, data } => {
+                    store.add_document(&id, &data, Some(usize::MAX));
                 }
                 CommitOp::Delete { id } => {
                     store.delete_index(&id);
@@ -196,8 +197,8 @@ impl CommitManager {
         *store = DocumentStore::new(None);
         for c in commits.into_iter().filter(|c| c.id <= commit_id) {
             match c.op {
-                CommitOp::Add { id: _, data } => {
-                    store.add_document(&data, None);
+                CommitOp::Add { id, data } => {
+                    store.add_document(&id, &data, Some(usize::MAX));
                 }
                 CommitOp::Delete { id } => {
                     store.delete_index(&id);
@@ -249,8 +250,8 @@ impl CommitManager {
             self.next_commit_id = commit.id + 1;
 
             match commit.op {
-                CommitOp::Add { id: _, data } => {
-                    store.add_document(&data, None);
+                CommitOp::Add { id, data } => {
+                    store.add_document(&id, &data, Some(usize::MAX));
                 }
                 CommitOp::Delete { id } => {
                     store.delete_index(&id);

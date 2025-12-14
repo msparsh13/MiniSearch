@@ -35,23 +35,22 @@ pub struct SnapshotManager {
 }
 
 impl SnapshotManager {
-  pub fn new(path: impl Into<String>, count: u32) -> Self {
-    let base = path.into();
-    let meta_path = format!("{}/meta.json", base);
+    pub fn new(path: impl Into<String>, count: u32) -> Self {
+        let base = path.into();
+        let meta_path = format!("{}/meta.json", base);
 
-    let curr = if let Ok(meta) = LocalStore::load::<SnapshotMeta>(&meta_path) {
-        meta.curr
-    } else {
-        0
-    };
+        let curr = if let Ok(meta) = LocalStore::load::<SnapshotMeta>(&meta_path) {
+            meta.curr
+        } else {
+            0
+        };
 
-    Self {
-        path: base,  // FIXED: store directory, not "meta.json"
-        count,
-        curr,
+        Self {
+            path: base, // FIXED: store directory, not "meta.json"
+            count,
+            curr,
+        }
     }
-}
-
 
     /// Save snapshot in rotating slots
 
@@ -67,16 +66,10 @@ impl SnapshotManager {
     pub fn save(&mut self, snapshot: &Snapshot) -> std::io::Result<()> {
         // 1–N rotation
         self.curr = (self.curr % self.count) + 1;
-        print!("{}", self.curr);
         let path = self.snapshot_path(self.curr);
         let tmp_path = format!("{}.tmp", path);
-        // --- Use LocalStore to save temp file ---
         LocalStore::save(snapshot, &tmp_path)?;
-
-        // --- Atomic replace ---
         std::fs::rename(tmp_path, &path)?;
-
-        // --- Save meta using LocalStore ---
         let meta = SnapshotMeta { curr: self.curr };
         LocalStore::save(&meta, &self.meta_path())?;
 
