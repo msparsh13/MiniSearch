@@ -1,0 +1,69 @@
+use std::collections::HashSet;
+
+use crate::{
+    engine::query_service::QueryService,
+    query_lang::ast::{CmpOp, Expr, Value},
+};
+
+/// Convert Vec<(&String, &String)> → HashSet<String>
+fn ids_from_pairs(pairs: Vec<(&String, &String)>) -> HashSet<String> {
+    pairs.into_iter().map(|(id, _)| id.clone()).collect()
+}
+
+pub fn execute(expr: &Expr, qs: &QueryService) -> HashSet<String> {
+    match expr {
+        // ------------------------------
+        // Comparisons
+        // ------------------------------
+        Expr::Compare { field, op, value } => match (op, value) {
+            // text equality
+            (CmpOp::Eq, Value::Text(v)) => qs.get_words(vec![v.as_str()]).into_iter().collect(),
+
+            // numeric comparisons
+            (CmpOp::Gt, Value::Number(n)) => ids_from_pairs(qs.greater_than(field, *n, None)),
+            (CmpOp::Gte, Value::Number(n)) => {
+                ids_from_pairs(qs.greater_than_equal(field, *n, None))
+            }
+            (CmpOp::Lt, Value::Number(n)) => ids_from_pairs(qs.less_than(field, *n, None)),
+            (CmpOp::Lte, Value::Number(n)) => ids_from_pairs(qs.less_than_equal(field, *n, None)),
+
+            _ => panic!("invalid comparison"),
+        },
+
+        // ------------------------------
+        // AND
+        // ------------------------------
+        Expr::And(a, b) => {
+            let mut left = execute(a, qs);
+            let right = execute(b, qs);
+            left.retain(|id| right.contains(id));
+            left
+        }
+
+        // ------------------------------
+        // OR
+        // ------------------------------
+        Expr::Or(a, b) => {
+            let mut left = execute(a, qs);
+            left.extend(execute(b, qs));
+            left
+        }
+
+        // ------------------------------
+        // NOT
+        // ------------------------------
+        Expr::Not(e) => {
+            // parser guarantees NOT applies to a single term
+            // engine guarantees correctness & fallback
+            match &**e {
+                Expr::Compare {
+                    op: CmpOp::Eq,
+                    value: Value::Text(word),
+                    ..
+                } => qs.not_word([word.as_str()].to_vec()).into_iter().collect(),
+
+                _ => panic!("NOT only supported on term expressions"),
+            }
+        }
+    }
+}

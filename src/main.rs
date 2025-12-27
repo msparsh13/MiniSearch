@@ -1,7 +1,8 @@
 use clap::{Parser, Subcommand};
 use mini_opensearch_api::{
-    engine::search_engine::SearchEngine, index::tokenizer::tokenizer::TokenizerConfig,
-    index::value::Value,
+    engine::search_engine::SearchEngine,
+    index::{tokenizer::tokenizer::TokenizerConfig, value::Value},
+    language::language::{run_query, tokenize},
 };
 use serde_json::Value as JsonValue;
 use std::{collections::HashMap, env, fs};
@@ -38,6 +39,10 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum QueryCommands {
+    Lang {
+        query: String,
+    },
+
     Get {
         id: String,
     },
@@ -244,6 +249,11 @@ fn main() {
             let qs = engine.query_service();
 
             match query {
+                QueryCommands::Lang { query } => {
+                    let result = run_query(&query, &qs);
+                    println!("Query Language results: {:#?}", result);
+                }
+
                 QueryCommands::Get { id } => match qs.get_doc_by_id(&id) {
                     Some(doc) => println!("{:#?}", doc),
                     None => println!("Document not found"),

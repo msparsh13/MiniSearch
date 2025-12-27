@@ -168,3 +168,94 @@ impl<'a> SearchEngine {
         &mut self.documents_store
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::index::value::Value;
+    use std::collections::HashMap;
+    use tempfile::tempdir;
+
+    fn make_doc(title: &str) -> HashMap<String, Value> {
+        let mut doc = HashMap::new();
+        doc.insert("title".to_string(), Value::Text(title.to_string()));
+        doc
+    }
+
+    #[test]
+    fn crash_and_recover_add() {
+        let dir = tempdir().unwrap();
+
+        let index_path = dir.path().join("index.json").to_string_lossy().to_string();
+        let commit_path = dir.path().join("commits.log").to_string_lossy().to_string();
+        let snapshot_path = dir.path().join("snapshots").to_string_lossy().to_string();
+
+        // ---- First run (before crash)
+        {
+            let mut engine = SearchEngine::new(
+                index_path.clone(),
+                commit_path.clone(),
+                snapshot_path.clone(),
+                None,
+            )
+            .unwrap();
+
+            engine.add_document(make_doc("hello world"), None).unwrap();
+            engine.add_document(make_doc("rust search"), None).unwrap();
+
+            // no graceful shutdown → simulate crash
+        }
+
+        // ---- Restart (replay must happen automatically)
+        let engine = SearchEngine::new(index_path, commit_path, snapshot_path, None).unwrap();
+
+        let qs = engine.query_service();
+        let res = qs.get_words(vec!["hello"]);
+
+        assert_eq!(res.len(), 1);
+    }
+
+    #[test]
+    fn replay_is_idempotent() {
+        let dir = tempdir().unwrap();
+
+        let index_path = dir.path().join("index.json").to_string_lossy().to_string();
+        let commit_path = dir.path().join("commits.log").to_string_lossy().to_string();
+        let snapshot_path = dir.path().join("snapshots").to_string_lossy().to_string();
+
+        // First run
+        {
+            let mut engine = SearchEngine::new(
+                index_path.clone(),
+                commit_path.clone(),
+                snapshot_path.clone(),
+                None,
+            )
+            .unwrap();
+
+            engine.add_document(make_doc("once"), None).unwrap();
+        }
+
+        // Second run
+        {
+            let engine = SearchEngine::new(
+                index_path.clone(),
+                commit_path.clone(),
+                snapshot_path.clone(),
+                None,
+            )
+            .unwrap();
+
+            let count = engine.store().store.len();
+            assert_eq!(count, 1);
+        }
+
+        // Third run (replay again)
+        {
+            let engine = SearchEngine::new(index_path, commit_path, snapshot_path, None).unwrap();
+
+            let count = engine.store().store.len();
+            assert_eq!(count, 1);
+        }
+    }
+}
