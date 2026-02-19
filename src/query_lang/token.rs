@@ -2,12 +2,22 @@
 pub enum Token {
     Ident(String),
     Number(i64),
-    And,
-    Or,
-    Not,
+
+    // comparison
     Eq,
     Gt,
     Gte,
     Lt,
     Lte,
+
+    // boolean
+    And,
+    Or,
+    Not,
+
+    // grouping
+    LParen, // (
+    RParen, // )
+
+    EOF,
 }

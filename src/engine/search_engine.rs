@@ -115,7 +115,6 @@ impl<'a> SearchEngine {
         // 4️⃣ Replay commits and load latest snapshot
 
         commit_manager.replay_withSnapshot(&mut documents_store);
-
         Ok(Self {
             index_path,
             documents_store,
