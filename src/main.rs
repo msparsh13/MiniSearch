@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand};
 use mini_opensearch_api::{
     engine::search_engine::SearchEngine,
-    index::{tokenizer::tokenizer::TokenizerConfig, value::Value},
+    index::{documents_store::DocumentStore, tokenizer::tokenizer::TokenizerConfig, value::Value},
     language::language::{run_query, tokenize},
+    utils::random_id::random_id,
 };
 use serde_json::Value as JsonValue;
 use std::{collections::HashMap, env, fs};
@@ -310,6 +311,7 @@ fn main() {
                 }
 
                 QueryCommands::Lte { field, max } => {
+                    println!("hi");
                     let res = qs.less_than_equal(&field, max, None);
                     println!("{:#?}", res);
                 }

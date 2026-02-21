@@ -134,7 +134,7 @@ impl DocumentStore {
     ) {
         let mut texts = Vec::new();
         let mut forwards = ForwardDoc::new();
-        self.extract_text(data, "", 0, max_depth, &mut texts, &mut forwards);
+        self.extract_text(data, "", 0, max_depth, &mut texts, &mut forwards, doc_id);
         self.forward_index.add_doc(doc_id, forwards);
         for (pos, (text, field_path)) in texts.iter().enumerate() {
             let (tokenized_words, tokenized_ngrams) =
@@ -201,11 +201,11 @@ impl DocumentStore {
         max_depth: usize,
         out_terms: &mut Vec<(String, String)>,
         forward: &mut ForwardDoc,
+        doc_id: &str,
     ) {
         if current_depth > max_depth {
             return;
         }
-
         for (key, value) in data.iter() {
             let field_path = if prefix.is_empty() {
                 key.clone()
@@ -225,14 +225,14 @@ impl DocumentStore {
                 Value::Number(n) => {
                     forward.numeric_fields.insert(field_path.clone(), *n);
 
-                    self.value_tree.add_index(&field_path, value, key);
+                    self.value_tree.add_index(&field_path, value, doc_id);
                     out_terms.push((n.to_string(), field_path));
                 }
 
                 Value::Date(d) => {
                     forward.date_fields.insert(field_path.clone(), d.clone());
 
-                    self.value_tree.add_index(&field_path, value, key);
+                    self.value_tree.add_index(&field_path, value, doc_id);
                     out_terms.push((d.clone(), field_path));
                 }
 
@@ -245,6 +245,7 @@ impl DocumentStore {
                         max_depth,
                         out_terms,
                         forward,
+                        doc_id,
                     );
                 }
             }

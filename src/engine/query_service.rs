@@ -166,12 +166,8 @@ impl<'a> QueryService<'a> {
     ) -> Vec<(&'a String, &'a String)> {
         let max_bound = i64::MAX;
         // > min → (min+1 ..= max_bound)
-        self.value_tree.range_query_with_exclude(
-            field_path,
-            Some(min + 1),
-            Some(max_bound),
-            exclude,
-        )
+        self.value_tree
+            .range_query_with_exclude(field_path, Some(min + 1), None, exclude)
     }
 
     pub fn greater_than_equal(
@@ -180,9 +176,8 @@ impl<'a> QueryService<'a> {
         min: i64,
         exclude: Option<&[i64]>,
     ) -> Vec<(&'a String, &'a String)> {
-        let max_bound = i64::MAX;
         self.value_tree
-            .range_query_with_exclude(field_path, Some(min), Some(max_bound), exclude)
+            .range_query_with_exclude(field_path, Some(min), None, exclude)
     }
 
     pub fn less_than(
@@ -191,14 +186,9 @@ impl<'a> QueryService<'a> {
         max: i64,
         exclude: Option<&[i64]>,
     ) -> Vec<(&'a String, &'a String)> {
-        let min_bound = i64::MIN;
         // < max → (min_bound ..= max-1)
-        self.value_tree.range_query_with_exclude(
-            field_path,
-            Some(min_bound),
-            Some(max - 1),
-            exclude,
-        )
+        self.value_tree
+            .range_query_with_exclude(field_path, None, Some(max - 1), exclude)
     }
 
     pub fn less_than_equal(
@@ -208,8 +198,9 @@ impl<'a> QueryService<'a> {
         exclude: Option<&[i64]>,
     ) -> Vec<(&'a String, &'a String)> {
         let min_bound = i64::MIN;
+
         self.value_tree
-            .range_query_with_exclude(field_path, Some(min_bound), Some(max), exclude)
+            .range_query_with_exclude(field_path, None, Some(max), exclude)
     }
 
     pub fn between(
