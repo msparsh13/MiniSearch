@@ -132,4 +132,45 @@ impl ValueTreeIndex {
             }
         }
     }
+
+    pub fn sort_query(
+        &self,
+        field_path: &str,
+        candidates: Option<&HashSet<String>>,
+        ascending: bool,
+    ) -> Vec<String> {
+        let mut result = Vec::new();
+
+        let Some(tree) = self.data.get(field_path) else {
+            return result;
+        };
+
+        // Forward iteration = ASC
+        if ascending {
+            for (_value, docs) in tree.iter() {
+                for (doc_id, _) in docs {
+                    if let Some(filter) = candidates {
+                        if !filter.contains(doc_id) {
+                            continue;
+                        }
+                    }
+                    result.push(doc_id.clone());
+                }
+            }
+        } else {
+            // Reverse iteration = DESC
+            for (_value, docs) in tree.iter().rev() {
+                for (doc_id, _) in docs {
+                    if let Some(filter) = candidates {
+                        if !filter.contains(doc_id) {
+                            continue;
+                        }
+                    }
+                    result.push(doc_id.clone());
+                }
+            }
+        }
+
+        result
+    }
 }

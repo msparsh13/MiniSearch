@@ -1,5 +1,5 @@
 use crate::query_lang::{
-    ast::{CmpOp, Expr, Value},
+    ast::{CmpOp, Expr, SortOrder, Value},
     token::Token,
 };
 
@@ -97,8 +97,32 @@ impl Parser {
     /* ------------------ entry ------------------ */
 
     pub fn parse(mut self) -> ParseResult<Expr> {
-        let expr = self.parse_or()?;
+        // COUNT prefix support
+        let mut expr = if self.consume(&Token::Cnt) {
+            let inner = self.parse_or()?;
+            Expr::Count(Box::new(inner))
+        } else {
+            self.parse_or()?
+        };
 
+        // Optional SORT
+        if self.consume(&Token::Asc) {
+            let field = self.expect_ident()?;
+            expr = Expr::Sort {
+                expr: Box::new(expr),
+                field,
+                order: SortOrder::Asc,
+            };
+        } else if self.consume(&Token::Desc) {
+            let field = self.expect_ident()?;
+            expr = Expr::Sort {
+                expr: Box::new(expr),
+                field,
+                order: SortOrder::Desc,
+            };
+        }
+
+        // Ensure no trailing tokens
         if self.pos != self.tokens.len() {
             return Err(ParseError::UnexpectedToken {
                 expected: "end of input".into(),

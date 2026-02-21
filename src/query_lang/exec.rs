@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     engine::query_service::QueryService,
-    query_lang::ast::{CmpOp, Expr, Value},
+    query_lang::ast::{CmpOp, Expr, SortOrder, Value},
 };
 
 /// Convert Vec<(&String, &String)> → HashSet<String>
@@ -12,6 +12,20 @@ fn ids_from_pairs(pairs: Vec<(&String, &String)>) -> HashSet<String> {
 
 pub fn execute(expr: &Expr, qs: &QueryService) -> HashSet<String> {
     match expr {
+        //-------------------------------
+        //Aggregation and sorting
+        //-------------------------------
+        Expr::Count(inner) => {
+            let result = execute(inner, qs);
+            println!("Count: {}", result.len());
+            result
+        }
+        Expr::Sort { expr, field, order } => {
+            let result_set = execute(expr, qs);
+            let sorted = qs.sort_query(Some(&result_set), field, matches!(order, SortOrder::Asc));
+
+            sorted.into_iter().collect()
+        }
         // ------------------------------
         // Comparisons
         // ------------------------------

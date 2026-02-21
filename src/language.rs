@@ -75,10 +75,13 @@ pub mod language {
                         }
                     }
 
-                    match ident.as_str() {
+                    match ident.to_uppercase().as_str() {
                         "AND" => tokens.push(Token::And),
                         "OR" => tokens.push(Token::Or),
                         "NOT" => tokens.push(Token::Not),
+                        "ASC" => tokens.push(Token::Asc),
+                        "DESC" => tokens.push(Token::Desc),
+                        "COUNT" => tokens.push(Token::Cnt),
                         _ => tokens.push(Token::Ident(ident)),
                     }
                 }

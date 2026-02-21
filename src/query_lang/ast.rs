@@ -8,6 +8,13 @@ pub enum Expr {
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
     Not(Box<Expr>),
+    Sort {
+        expr: Box<Expr>,
+        field: String,
+        order: SortOrder,
+    },
+
+    Count(Box<Expr>),
 }
 
 #[derive(Debug, Clone)]
@@ -23,4 +30,10 @@ pub enum CmpOp {
 pub enum Value {
     Number(i64),
     Text(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum SortOrder {
+    Asc,
+    Desc,
 }

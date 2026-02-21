@@ -8,6 +8,7 @@ use regex::SetMatches;
 
 use crate::index::{
     documents_store::{Document, DocumentStore},
+    forward_indexer::ForwardIndex,
     inverted_index::inverted_index::InvertedIndex,
     n_gram::{n_gram_index::NgramIndex, n_gram_trie::NgramTrie},
     tokenizer::tokenizer::Tokenizer,
@@ -22,6 +23,7 @@ pub struct QueryService<'a> {
     n_gram_index: &'a Option<NgramIndex>,
     n_gram_trie: &'a Option<NgramTrie>,
     value_tree: &'a ValueTreeIndex,
+    forward_index: &'a ForwardIndex,
 }
 
 impl<'a> QueryService<'a> {
@@ -34,6 +36,7 @@ impl<'a> QueryService<'a> {
             n_gram_index: &state.n_gram_index,
             n_gram_trie: &state.n_gram_trie,
             value_tree: &state.value_tree,
+            forward_index: &state.forward_index,
         }
     }
     pub fn ngram_bm25(
@@ -350,5 +353,45 @@ impl<'a> QueryService<'a> {
 
     pub fn get_doc_by_id(&self, id: &str) -> Option<&'a Document> {
         self.store.get(id)
+    }
+
+    pub fn sort_query(
+        &self,
+        candidates: Option<&HashSet<String>>,
+        search_field: &str,
+        ascending: bool,
+    ) -> Vec<String> {
+        let mut doc_scores: Vec<(String, i64)> = Vec::new();
+
+        if let Some(candidates) = candidates {
+            for doc_id in candidates {
+                if let Some(forward_doc) = self.forward_index.get(doc_id) {
+                    let mut best: Option<i64> = None;
+
+                    for (field, value) in &forward_doc.numeric_fields {
+                        if field.contains(search_field) {
+                            let v = *value as i64;
+
+                            best = match best {
+                                Some(current) => Some(current.max(v)), // aggregation rule
+                                None => Some(v),
+                            };
+                        }
+                    }
+
+                    if let Some(score) = best {
+                        doc_scores.push((doc_id.clone(), score));
+                    }
+                }
+            }
+        }
+
+        if ascending {
+            doc_scores.sort_by_key(|(_, v)| *v);
+        } else {
+            doc_scores.sort_by(|a, b| b.1.cmp(&a.1));
+        }
+
+        doc_scores.into_iter().map(|(id, _)| id).collect()
     }
 }

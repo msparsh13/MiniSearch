@@ -20,4 +20,8 @@ pub enum Token {
     RParen, // )
 
     EOF,
+    // aggregation
+    Desc,
+    Asc,
+    Cnt,
 }

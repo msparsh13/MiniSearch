@@ -118,7 +118,6 @@ impl DocumentStore {
                 }
             }
             Value::Object(obj) => {
-                // print!("{:?}",obj);
                 for (_, v) in obj.iter_mut() {
                     Self::normalize_value_rec(v, current_depth + 1, max_depth);
                 }
