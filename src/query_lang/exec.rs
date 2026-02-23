@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    engine::query_service::QueryService,
+    engine::query_service::{QueryService, SortField},
     query_lang::ast::{CmpOp, Expr, SortOrder, Value},
 };
 
@@ -10,7 +10,7 @@ fn ids_from_pairs(pairs: Vec<(&String, &String)>) -> HashSet<String> {
     pairs.into_iter().map(|(id, _)| id.clone()).collect()
 }
 
-pub fn execute(expr: &Expr, qs: &QueryService) -> HashSet<String> {
+pub fn execute(expr: &Expr, qs: &QueryService) -> Vec<String> {
     match expr {
         //-------------------------------
         //Aggregation and sorting
@@ -20,9 +20,17 @@ pub fn execute(expr: &Expr, qs: &QueryService) -> HashSet<String> {
             println!("Count: {}", result.len());
             result
         }
-        Expr::Sort { expr, field, order } => {
+        Expr::Sort { expr, fields } => {
             let result_set = execute(expr, qs);
-            let sorted = qs.sort_query(Some(&result_set), field, matches!(order, SortOrder::Asc));
+            let sort_fields: Vec<SortField> = fields
+                .iter()
+                .map(|(field, order)| SortField {
+                    field_path: field.clone(),
+                    ascending: matches!(order, SortOrder::Asc),
+                })
+                .collect();
+
+            let sorted = qs.sort_docs_2(result_set.into_iter().collect(), &sort_fields);
 
             sorted.into_iter().collect()
         }
@@ -34,12 +42,16 @@ pub fn execute(expr: &Expr, qs: &QueryService) -> HashSet<String> {
             (CmpOp::Eq, Value::Text(v)) => qs.get_words(vec![v.as_str()]).into_iter().collect(),
 
             // numeric comparisons
-            (CmpOp::Gt, Value::Number(n)) => ids_from_pairs(qs.greater_than(field, *n, None)),
+            (CmpOp::Gt, Value::Number(n)) => ids_from_pairs(qs.greater_than(field, *n, None)).into_iter()
+    .collect::<Vec<String>>(),
             (CmpOp::Gte, Value::Number(n)) => {
-                ids_from_pairs(qs.greater_than_equal(field, *n, None))
+                ids_from_pairs(qs.greater_than_equal(field, *n, None)).into_iter()
+    .collect::<Vec<String>>()
             }
-            (CmpOp::Lt, Value::Number(n)) => ids_from_pairs(qs.less_than(field, *n, None)),
-            (CmpOp::Lte, Value::Number(n)) => ids_from_pairs(qs.less_than_equal(field, *n, None)),
+            (CmpOp::Lt, Value::Number(n)) => ids_from_pairs(qs.less_than(field, *n, None)).into_iter()
+    .collect::<Vec<String>>(),
+            (CmpOp::Lte, Value::Number(n)) => ids_from_pairs(qs.less_than_equal(field, *n, None)).into_iter()
+    .collect::<Vec<String>>(),
 
             _ => panic!("invalid comparison"),
         },

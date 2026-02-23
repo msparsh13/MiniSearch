@@ -106,22 +106,75 @@ impl Parser {
         };
 
         // Optional SORT
-        if self.consume(&Token::Asc) {
-            let field = self.expect_ident()?;
+        // Optional SORT BY
+        if self.consume(&Token::Sort) {
+            if !self.consume(&Token::By) {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "BY".into(),
+                    found: self.peek().cloned(),
+                });
+            }
+
+            if !self.consume(&Token::LParen) {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "(".into(),
+                    found: self.peek().cloned(),
+                });
+            }
+
+            let mut fields = Vec::new();
+
+            loop {
+                // expect ( field order )
+                if !self.consume(&Token::LParen) {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "(".into(),
+                        found: self.peek().cloned(),
+                    });
+                }
+
+                let field = self.expect_ident()?;
+
+                let order = if self.consume(&Token::Asc) {
+                    SortOrder::Asc
+                } else if self.consume(&Token::Desc) {
+                    SortOrder::Desc
+                } else {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "ASC or DESC".into(),
+                        found: self.peek().cloned(),
+                    });
+                };
+
+                if !self.consume(&Token::RParen) {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: ")".into(),
+                        found: self.peek().cloned(),
+                    });
+                }
+
+                fields.push((field, order));
+
+                // optional comma
+                if self.consume(&Token::Comma) {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+
+            if !self.consume(&Token::RParen) {
+                return Err(ParseError::UnexpectedToken {
+                    expected: ")".into(),
+                    found: self.peek().cloned(),
+                });
+            }
+
             expr = Expr::Sort {
                 expr: Box::new(expr),
-                field,
-                order: SortOrder::Asc,
-            };
-        } else if self.consume(&Token::Desc) {
-            let field = self.expect_ident()?;
-            expr = Expr::Sort {
-                expr: Box::new(expr),
-                field,
-                order: SortOrder::Desc,
+                fields,
             };
         }
-
         // Ensure no trailing tokens
         if self.pos != self.tokens.len() {
             return Err(ParseError::UnexpectedToken {

@@ -24,4 +24,7 @@ pub enum Token {
     Desc,
     Asc,
     Cnt,
+    Sort,
+    By,
+    Comma,
 }

@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::{
     collections::{BinaryHeap, HashMap, HashSet},
     string,
@@ -14,6 +15,13 @@ use crate::index::{
     tokenizer::tokenizer::Tokenizer,
     value_tree::b_tree::ValueTreeIndex,
 };
+use crate::query_lang::ast::SortOrder;
+
+#[derive(Debug, Clone)]
+pub struct SortField {
+    pub field_path: String,
+    pub ascending: bool,
+}
 
 pub struct QueryService<'a> {
     store: &'a HashMap<String, Document>,
@@ -394,4 +402,158 @@ impl<'a> QueryService<'a> {
 
         doc_scores.into_iter().map(|(id, _)| id).collect()
     }
+
+    pub fn sort_docs(&self, doc_ids: Vec<String>, sort_fields: &[SortField]) -> Vec<String> {
+        if sort_fields.is_empty() {
+            return doc_ids;
+        }
+
+        let mut docs_with_keys: Vec<(String, Vec<Option<f64>>)> = Vec::new();
+
+        for doc_id in doc_ids {
+            if let Some(forward) = self.forward_index.get(&doc_id) {
+                let mut keys: Vec<Option<f64>> = Vec::with_capacity(sort_fields.len());
+                print!("{:?}", forward.numeric_fields);
+                for sf in sort_fields {
+                    let query_last = sf.field_path.rsplit('.').next().unwrap_or(&sf.field_path);
+
+                    let mut values: Vec<f64> = Vec::new();
+
+                    for (field_path, value) in &forward.numeric_fields {
+                        let field_last = field_path.rsplit('.').next().unwrap_or(field_path);
+
+                        if field_last == query_last {
+                            values.push(*value);
+                        }
+                    }
+
+                    let best = if values.is_empty() {
+                        None
+                    } else if sf.ascending {
+                        Some(values.into_iter().fold(f64::INFINITY, f64::min))
+                    } else {
+                        Some(values.into_iter().fold(f64::NEG_INFINITY, f64::max))
+                    };
+
+                    keys.push(best);
+                }
+                docs_with_keys.push((doc_id, keys));
+            }
+        }
+
+        // Multi-key deterministic sort
+        docs_with_keys.sort_by(|a, b| {
+            for (i, sf) in sort_fields.iter().enumerate() {
+                let ord = match (&a.1[i], &b.1[i]) {
+                    (Some(x), Some(y)) => x.partial_cmp(y).unwrap_or(Ordering::Equal),
+
+                    (None, None) => Ordering::Equal,
+
+                    // Missing values always go last
+                    (None, Some(_)) => Ordering::Greater,
+                    (Some(_), None) => Ordering::Less,
+                };
+
+                let ord = if sf.ascending { ord } else { ord.reverse() };
+
+                if ord != Ordering::Equal {
+                    return ord;
+                }
+            }
+
+            // Deterministic tie breaker
+            a.0.cmp(&b.0)
+        });
+
+        docs_with_keys.into_iter().map(|(id, _)| id).collect()
+    }
+
+
+
+
+    pub fn suffix_matches(
+        &self,
+        numeric_indexes: &HashMap<String, f64>,
+        suffix: &str,
+    ) -> Vec<(String, f64)> {
+
+        let mut matches: Vec<(String, f64)> = numeric_indexes
+            .iter()
+            .filter(|(field_path, _)| field_path.ends_with(suffix))
+            .map(|(field_path, value)| (field_path.clone(), *value))
+            .collect();
+
+        // Sort by longest field path first (most specific prefix wins)
+        matches.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+
+        matches
+    }
+
+
+pub fn sort_docs_2(
+    &self,
+    doc_ids: Vec<String>,
+    sort_fields: &[SortField],
+) -> Vec<String> {
+    if sort_fields.is_empty() {
+        return doc_ids;
+    }
+
+    let mut docs_with_keys: Vec<(String, Vec<Option<f64>>)> = Vec::new();
+
+    for doc_id in doc_ids {
+        let mut values: Vec<Option<f64>> = Vec::new();
+
+        if let Some(forward_doc) = self.forward_index.get(&doc_id) {
+            for sf in sort_fields {
+
+                // 🔥 ONLY ADDITION — use your suffix_matches
+                let matches = self.suffix_matches(
+                    &forward_doc.numeric_fields,
+                    &sf.field_path,
+                );
+
+                // take best match (first or however your fn returns)
+                let value = matches
+                    .first()
+                    .map(|(_, v)| *v);
+
+                values.push(value);
+            }
+        } else {
+            values = vec![None; sort_fields.len()];
+        }
+
+        docs_with_keys.push((doc_id, values));
+    }
+
+    docs_with_keys.sort_by(|a, b| {
+        for (i, sf) in sort_fields.iter().enumerate() {
+            let va = a.1[i];
+            let vb = b.1[i];
+
+            let ord = match (va, vb) {
+                (Some(x), Some(y)) => x.partial_cmp(&y).unwrap_or(Ordering::Equal),
+                (None, Some(_)) => Ordering::Greater,
+                (Some(_), None) => Ordering::Less,
+                (None, None) => Ordering::Equal,
+            };
+
+            let ord = if sf.ascending {
+    ord
+} else {
+    ord.reverse()
+};
+            if ord != Ordering::Equal {
+                return ord;
+            }
+        }
+
+        a.0.cmp(&b.0)
+    });
+
+    docs_with_keys.into_iter().map(|(id, _)| id).collect()
+}
+
+
 }

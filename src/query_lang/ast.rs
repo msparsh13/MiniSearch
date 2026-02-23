@@ -10,8 +10,7 @@ pub enum Expr {
     Not(Box<Expr>),
     Sort {
         expr: Box<Expr>,
-        field: String,
-        order: SortOrder,
+        fields: Vec<(String, SortOrder)>,
     },
 
     Count(Box<Expr>),

@@ -5,10 +5,7 @@ pub mod language {
     use crate::query_lang::exec::execute;
     use crate::query_lang::parser::Parser;
     use crate::query_lang::token::Token;
-    pub fn run_query(
-        query: &str,
-        qs: &QueryService,
-    ) -> Result<std::collections::HashSet<String>, String> {
+    pub fn run_query(query: &str, qs: &QueryService) -> Result<Vec<String>, String> {
         let tokens = tokenize(query);
 
         let parser = Parser::new(tokens);
@@ -50,6 +47,7 @@ pub mod language {
                         tokens.push(Token::Lt);
                     }
                 }
+                ',' => tokens.push(Token::Comma),
 
                 // numbers
                 c if c.is_ascii_digit() => {
@@ -82,6 +80,9 @@ pub mod language {
                         "ASC" => tokens.push(Token::Asc),
                         "DESC" => tokens.push(Token::Desc),
                         "COUNT" => tokens.push(Token::Cnt),
+                        "SORT" => tokens.push(Token::Sort),
+                        "BY" => tokens.push(Token::By),
+
                         _ => tokens.push(Token::Ident(ident)),
                     }
                 }
